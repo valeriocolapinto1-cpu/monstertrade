@@ -3,7 +3,8 @@ import Link from "next/link";
 
 import { Badge } from "@/components/badge";
 import { Kpi, KpiStrip } from "@/components/kpi";
-import { type BrokerPortfolio, getBrokerPortfolio, getPortfolio } from "@/lib/api";
+import { OrdersPanel } from "@/components/orders-panel";
+import { type BrokerPortfolio, getBrokerPortfolio, getOrders, getPortfolio } from "@/lib/api";
 import { formatEur, formatNumber, formatPercent, formatPrice } from "@/lib/format";
 import { leverageLabel } from "@/lib/instruments";
 import { HORIZON_SHORT } from "@/lib/labels";
@@ -12,8 +13,9 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = { title: "Portafoglio" };
 
 export default async function PortafoglioPage() {
-  const [p, broker] = await Promise.all([
+  const [p, orders, broker] = await Promise.all([
     getPortfolio(),
+    getOrders().catch(() => null),
     getBrokerPortfolio().catch((e: unknown) => ({ configured: true, error: String(e) }) as BrokerPortfolio & { error?: string }),
   ]);
   const loss = Math.max(-p.day_pnl, 0);
@@ -22,9 +24,10 @@ export default async function PortafoglioPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Portafoglio e rischio</h1>
-        <p className="text-xs text-muted-foreground">Conto reale in sola lettura e simulazione</p>
+        <p className="text-xs text-muted-foreground">Conto reale, ordini con conferma e simulazione</p>
       </div>
       <RealAccount data={broker} />
+      <OrdersPanel data={orders} />
 
       <h2 className="pt-2 text-2xs font-medium uppercase tracking-wider text-muted-foreground">Simulazione</h2>
       <KpiStrip>

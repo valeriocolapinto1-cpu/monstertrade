@@ -29,3 +29,7 @@ services:
         sync: false
       - key: T212_ENV
         value: live
+      # Ordini (passo C): disattivati finché non imposti demo o live. La chiave di trading
+      # (T212_ORDER_API_KEY e T212_ORDER_API_SECRET) si aggiunge a mano nel pannello Render.
+      - key: ORDERS_MODE
+        value: disabled

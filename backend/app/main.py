@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.broker import router as broker_router
+from app.api.orders import router as orders_router
 from app.api.routes import router
 from app.api.security import api_key_middleware
 from app.api.trading import router as trading_router
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
     app.include_router(router)
     app.include_router(trading_router)
     app.include_router(broker_router)
+    app.include_router(orders_router)
     return app
 
 

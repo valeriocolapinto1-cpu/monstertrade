@@ -3,14 +3,16 @@ import type { Metadata } from "next";
 
 import { IdeaRow } from "@/components/idea-row";
 import { Kpi, KpiStrip } from "@/components/kpi";
-import { getToday } from "@/lib/api";
+import { getOrders, getToday } from "@/lib/api";
 import { formatEur, formatNumber } from "@/lib/format";
 import { HORIZON_SHORT } from "@/lib/labels";
 
 export const metadata: Metadata = { title: "Oggi" };
 
 export default async function OggiPage() {
-  const t = await getToday();
+  const [t, orders] = await Promise.all([getToday(), getOrders().catch(() => null)]);
+  const orderMode =
+    orders && orders.configured && !orders.kill_switch && orders.mode !== "disabled" ? orders.mode : undefined;
   const limit = t.limits.max_daily_loss * t.capital;
   const loss = Math.max(-t.day_pnl, 0);
   return (
@@ -18,8 +20,12 @@ export default async function OggiPage() {
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Oggi</h1>
         <p className="text-xs text-muted-foreground">
-          Rischio calcolato su: {t.risk_source === "conto" ? "conto Trading 212 (sola lettura)" : "simulazione"} ·
-          nessun ordine viene inviato al broker
+          Rischio calcolato su: {t.risk_source === "conto" ? "conto Trading 212" : "simulazione"} ·{" "}
+          {orderMode === "live"
+            ? "ordini sul conto reale, ognuno con la tua conferma"
+            : orderMode === "demo"
+              ? "ordini sul conto demo, ognuno con la tua conferma"
+              : "ordini disattivati: solo suggerimenti"}
         </p>
       </div>
       <KpiStrip>
@@ -71,7 +77,7 @@ export default async function OggiPage() {
         ) : (
           <div className="divide-y">
             {t.proposals.map((idea) => (
-              <IdeaRow key={idea.id} idea={idea} />
+              <IdeaRow key={idea.id} idea={idea} orderMode={orderMode} />
             ))}
           </div>
         )}

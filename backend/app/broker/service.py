@@ -65,29 +65,34 @@ def map_positions(snapshot: BrokerSnapshot) -> list[MappedPosition]:
     return [MappedPosition(p, match_instrument(p.ticker)) for p in snapshot.positions]
 
 
-def day_start_total(conn: Connection, snapshot: BrokerSnapshot) -> float:
+def day_start_total(conn: Connection, snapshot: BrokerSnapshot, env: str = "live") -> float:
     """Valore del conto alla prima lettura della giornata (UTC), salvato una volta al giorno."""
     today = datetime.now(UTC).date()
     conn.execute(
         insert(broker_snapshots)
         .values(
             day=today,
+            env=env,
             total=snapshot.summary.total,
             cash=snapshot.summary.cash,
             invested=snapshot.summary.invested,
         )
-        .on_conflict_do_nothing(index_elements=[broker_snapshots.c.day])
+        .on_conflict_do_nothing(index_elements=[broker_snapshots.c.day, broker_snapshots.c.env])
     )
     value = conn.execute(
-        select(broker_snapshots.c.total).where(broker_snapshots.c.day == today)
+        select(broker_snapshots.c.total).where(
+            broker_snapshots.c.day == today, broker_snapshots.c.env == env
+        )
     ).scalar_one()
     return float(value)
 
 
-def real_state(conn: Connection, snapshot: BrokerSnapshot) -> PortfolioState:
+def real_state(
+    conn: Connection, snapshot: BrokerSnapshot, env: str | None = None
+) -> PortfolioState:
     mapped = map_positions(snapshot)
     return PortfolioState(
         equity=snapshot.summary.total,
-        day_start_equity=day_start_total(conn, snapshot),
+        day_start_equity=day_start_total(conn, snapshot, env or get_settings().t212_env),
         open_positions=[OpenPosition(m.key, m.leverage, m.position.value) for m in mapped],
     )

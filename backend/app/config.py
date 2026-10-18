@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     t212_api_key: SecretStr | None = None
     t212_api_secret: SecretStr | None = None
     t212_env: str = Field(default="live", pattern="^(live|demo)$")
+    # Passo C: ordini. Disattivati di default; "demo" usa il conto di prova, "live" quello reale.
+    # La chiave per gli ordini è separata da quella di sola lettura.
+    orders_mode: str = Field(default="disabled", pattern="^(disabled|demo|live)$")
+    t212_order_api_key: SecretStr | None = None
+    t212_order_api_secret: SecretStr | None = None
+    # Limiti rigidi per ordine e per giorno, oltre a quelli di rischio.
+    max_order_eur: float = Field(default=200.0, ge=10, le=2000)
+    max_orders_per_day: int = Field(default=3, ge=1, le=10)
 
 
 @lru_cache
