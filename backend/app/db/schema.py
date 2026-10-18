@@ -2,6 +2,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Column,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     Text,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 
 metadata = MetaData(
     naming_convention={
@@ -80,4 +82,44 @@ indicators = Table(
     Column("name", String(32), primary_key=True),
     Column("value", Float, nullable=False),
     CheckConstraint("timeframe IN ('5m', '15m', '1d')", name="timeframe_valid"),
+)
+
+sentiment = Table(
+    "sentiment",
+    metadata,
+    Column(
+        "instrument_id",
+        Integer,
+        ForeignKey("instruments.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("date", Date, primary_key=True),
+    Column("source", String(16), primary_key=True),
+    Column("score", Float, nullable=False),
+    Column("mentions", Integer, nullable=False),
+    CheckConstraint("score >= -1 AND score <= 1", name="score_range"),
+    CheckConstraint("mentions >= 0", name="mentions_positive"),
+)
+
+signals = Table(
+    "signals",
+    metadata,
+    Column(
+        "instrument_id",
+        Integer,
+        ForeignKey("instruments.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("horizon", String(8), primary_key=True),
+    Column("ts", DateTime(timezone=True), primary_key=True),
+    Column("score", Float, nullable=False),
+    Column("components", JSONB, nullable=False),
+    Column("favorable", JSONB, nullable=False),
+    Column("contrary", JSONB, nullable=False),
+    Column("risk_label", String(16), nullable=False),
+    CheckConstraint("score >= -100 AND score <= 100", name="score_range"),
+    CheckConstraint("horizon IN ('day', 'swing', 'long')", name="horizon_valid"),
+    CheckConstraint(
+        "risk_label IN ('Basso', 'Medio', 'Alto', 'Molto alto')", name="risk_label_valid"
+    ),
 )

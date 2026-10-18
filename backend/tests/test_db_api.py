@@ -116,3 +116,47 @@ def test_indicators_correlations_and_indicator_job(engine: Engine, client: TestC
         ids = repo.instrument_ids(conn)
         stored = repo.load_indicators(conn, ids["SPX"], Timeframe.D1, ["rsi_14"])
     assert not stored.empty and list(stored.columns) == ["rsi_14"]
+
+
+def test_sentiment_signals_jobs_and_endpoints(engine: Engine, client: TestClient) -> None:
+    from app.jobs import sentiment as sentiment_job
+    from app.jobs import signals as signals_job
+    from app.sentiment.scorer import LexiconScorer
+    from app.sentiment.sources import Item, Target
+
+    class FakeSource:
+        name = "news"
+
+        def available(self) -> bool:
+            return True
+
+        def fetch(self, target: Target) -> list[Item]:
+            return [
+                Item(
+                    "news",
+                    target.symbol,
+                    datetime(2026, 10, 16, 12, tzinfo=UTC),
+                    "Stocks surge to record highs",
+                )
+            ]
+
+    run_update(engine, FakeRegistry(), now=datetime(2026, 10, 17, 12, tzinfo=UTC))
+    assert sentiment_job.run(engine, [FakeSource()], LexiconScorer()) == 6
+    assert signals_job.run(engine) > 0
+
+    signals = client.get("/api/instruments/NDX3S/signals").json()
+    assert {s["horizon"] for s in signals} >= {"swing", "day"}
+    for s in signals:
+        assert -100 <= s["score"] <= 100
+        assert s["risk_label"] in {"Alto", "Molto alto"}
+        assert all(e["value"] > 0 for e in s["favorable"])
+        assert all(e["value"] < 0 for e in s["contrary"])
+        assert s["weights"]["trend"] > 0
+    under = {s["horizon"]: s["score"] for s in client.get("/api/instruments/NDX/signals").json()}
+    for s in signals:
+        assert s["score"] == pytest.approx(-under[s["horizon"]], abs=0.11)
+
+    sent = client.get("/api/instruments/NDX3L/sentiment", params={"days": 365}).json()
+    assert sent["underlying"] == "NDX"
+    assert sent["items"] and sent["items"][0]["score"] == 1.0
+    assert len(client.get("/api/signals").json()) >= 14

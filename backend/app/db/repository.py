@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app.data.models import OHLCV_COLUMNS, Timeframe, empty_ohlcv
 from app.data.universe import InstrumentSpec
-from app.db.schema import indicators, instruments, prices
+from app.db.schema import indicators, instruments, prices, sentiment, signals
 
 BATCH = 5000
 
@@ -168,3 +168,98 @@ def load_indicators(
     wide = frame.pivot(index="ts", columns="name", values="value").sort_index()
     wide.index = pd.DatetimeIndex(wide.index).tz_convert("UTC")
     return wide
+
+
+def upsert_sentiment(conn: Connection, rows: list[dict[str, object]]) -> int:
+    if not rows:
+        return 0
+    stmt = insert(sentiment)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[sentiment.c.instrument_id, sentiment.c.date, sentiment.c.source],
+        set_={"score": stmt.excluded.score, "mentions": stmt.excluded.mentions},
+    )
+    conn.execute(stmt, rows)
+    return len(rows)
+
+
+def load_sentiment(
+    conn: Connection, instrument_id: int, sources: list[str] | None = None
+) -> pd.DataFrame:
+    """Sentiment giornaliero per fonte: colonne date, source, score, mentions."""
+    conds = [sentiment.c.instrument_id == instrument_id]
+    if sources:
+        conds.append(sentiment.c.source.in_(sources))
+    rows = conn.execute(
+        select(sentiment.c.date, sentiment.c.source, sentiment.c.score, sentiment.c.mentions)
+        .where(and_(*conds))
+        .order_by(sentiment.c.date)
+    ).all()
+    return pd.DataFrame(rows, columns=["date", "source", "score", "mentions"])
+
+
+def daily_sentiment_index(frame: pd.DataFrame) -> pd.Series:
+    """Media giornaliera tra le fonti, pesata per numero di menzioni (minimo 1)."""
+    if frame.empty:
+        return pd.Series(dtype="float64")
+    weights = frame["mentions"].clip(lower=1)
+    num = (frame["score"] * weights).groupby(frame["date"]).sum()
+    den = weights.groupby(frame["date"]).sum()
+    out = num / den
+    out.index = pd.DatetimeIndex(out.index)
+    return out
+
+
+def replace_signals(
+    conn: Connection, instrument_id: int, horizon: str, rows: list[dict[str, object]], keep: int
+) -> int:
+    if rows:
+        stmt = insert(signals)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[signals.c.instrument_id, signals.c.horizon, signals.c.ts],
+            set_={
+                c: stmt.excluded[c]
+                for c in ("score", "components", "favorable", "contrary", "risk_label")
+            },
+        )
+        conn.execute(
+            stmt, [{"instrument_id": instrument_id, "horizon": horizon, **r} for r in rows]
+        )
+    # Si tengono solo le ultime `keep` righe per orizzonte.
+    cutoff = conn.execute(
+        select(signals.c.ts)
+        .where(signals.c.instrument_id == instrument_id, signals.c.horizon == horizon)
+        .order_by(signals.c.ts.desc())
+        .offset(keep)
+        .limit(1)
+    ).scalar_one_or_none()
+    if cutoff is not None:
+        conn.execute(
+            signals.delete().where(
+                signals.c.instrument_id == instrument_id,
+                signals.c.horizon == horizon,
+                signals.c.ts <= cutoff,
+            )
+        )
+    return len(rows)
+
+
+def latest_signals(conn: Connection, instrument_id: int | None = None) -> list[dict[str, object]]:
+    """Ultimo segnale per strumento e orizzonte."""
+    ranked = select(
+        signals,
+        func.row_number()
+        .over(
+            partition_by=(signals.c.instrument_id, signals.c.horizon),
+            order_by=signals.c.ts.desc(),
+        )
+        .label("rn"),
+    )
+    if instrument_id is not None:
+        ranked = ranked.where(signals.c.instrument_id == instrument_id)
+    sub = ranked.subquery()
+    rows = conn.execute(
+        select(sub, instruments.c.symbol)
+        .join(instruments, instruments.c.id == sub.c.instrument_id)
+        .where(sub.c.rn == 1)
+    ).mappings()
+    return [dict(r) for r in rows]

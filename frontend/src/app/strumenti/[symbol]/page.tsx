@@ -8,6 +8,8 @@ import { Change } from "@/components/change";
 import { BacktestTable } from "@/components/backtest-table";
 import { PriceChart } from "@/components/price-chart";
 import { RiskPanel } from "@/components/risk-panel";
+import { SentimentPanel } from "@/components/sentiment-panel";
+import { SignalsPanel } from "@/components/signals-panel";
 import {
   type Correlations,
   getBacktest,
@@ -15,6 +17,8 @@ import {
   getIndicatorSnapshot,
   getInstruments,
   getQuality,
+  getSentiment,
+  getSignals,
   type Instrument,
   type QualityItem,
   SYMBOL_PATTERN,
@@ -33,13 +37,16 @@ export async function generateMetadata({
 export default async function StrumentoPage({ params }: PageProps<"/strumenti/[symbol]">) {
   const { symbol } = await params;
   if (!SYMBOL_PATTERN.test(symbol)) notFound();
-  const [instruments, quality, snapshot, backtest, correlations] = await Promise.all([
-    getInstruments(),
-    getQuality().catch(() => null),
-    getIndicatorSnapshot(symbol).catch(() => null),
-    getBacktest(symbol).catch(() => null),
-    getCorrelations().catch(() => null),
-  ]);
+  const [instruments, quality, snapshot, backtest, correlations, signals, sentiment] =
+    await Promise.all([
+      getInstruments(),
+      getQuality().catch(() => null),
+      getIndicatorSnapshot(symbol).catch(() => null),
+      getBacktest(symbol).catch(() => null),
+      getCorrelations().catch(() => null),
+      getSignals(symbol).catch(() => []),
+      getSentiment(symbol).catch(() => null),
+    ]);
   const item = instruments.find((i) => i.symbol === symbol);
   if (!item) notFound();
   const checks = quality?.items.filter((q) => q.symbol === symbol) ?? [];
@@ -61,10 +68,12 @@ export default async function StrumentoPage({ params }: PageProps<"/strumenti/[s
           {snapshot && (
             <RiskPanel metrics={snapshot.metrics} latest={snapshot.latest} leverage={item.leverage} />
           )}
+          {sentiment && <SentimentPanel data={sentiment} />}
           {correlations && <TopCorrelations symbol={item.symbol} data={correlations} />}
           <DataQuality checks={checks} />
         </aside>
       </div>
+      <SignalsPanel signals={signals} underlying={item.underlying} />
       <section aria-labelledby="backtest" className="rounded-md border bg-card">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-2">
           <h2 id="backtest" className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">

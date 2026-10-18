@@ -22,7 +22,7 @@ export default async function BacktestPage() {
 
   const best = (symbol: string, horizon: BacktestRow["horizon"]) => {
     const rows = report.results.filter((r) => r.symbol === symbol && r.horizon === horizon);
-    const strategies = rows.filter((r) => r.family !== "riferimento");
+    const strategies = rows.filter((r) => r.family !== "riferimento" && r.family !== "score");
     const top = strategies.sort((a, b) => (b.total_return ?? -9) - (a.total_return ?? -9))[0];
     const hold = rows.find((r) => r.family === "riferimento");
     return { top, hold };
@@ -55,6 +55,41 @@ export default async function BacktestPage() {
           troppo su capitali piccoli.
         </p>
       </div>
+      {report.score_comparison && report.score_comparison.length > 0 && (
+        <section aria-labelledby="score-vs" className="overflow-x-auto rounded-md border bg-card">
+          <h2 id="score-vs" className="border-b px-4 py-2 text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+            Score contro strategie semplici · Fase 3 {report.score_improves ? "· criterio soddisfatto" : "· criterio non soddisfatto"}
+          </h2>
+          <table className="w-full min-w-[560px] text-xs">
+            <thead>
+              <tr className="text-2xs text-subtle">
+                <th scope="col" className="px-4 py-1.5 text-left font-normal">Orizzonte</th>
+                <th scope="col" className="px-2 py-1.5 text-right font-normal">Sharpe score</th>
+                <th scope="col" className="px-2 py-1.5 text-right font-normal">Sharpe semplici (media)</th>
+                <th scope="col" className="px-2 py-1.5 text-right font-normal">Batte la media</th>
+                <th scope="col" className="px-4 py-1.5 text-right font-normal">Batte la migliore</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {report.score_comparison.map((c) => (
+                <tr key={c.horizon}>
+                  <th scope="row" className="px-4 py-1.5 text-left font-normal">{HORIZON_LABEL[c.horizon].split(" · ")[0]}</th>
+                  <td className={cn("num px-2 py-1.5 text-right", c.score_sharpe > c.simple_sharpe ? "text-up" : "text-down")}>
+                    {formatNumber(c.score_sharpe, 2)}
+                  </td>
+                  <td className="num px-2 py-1.5 text-right text-muted-foreground">{formatNumber(c.simple_sharpe, 2)}</td>
+                  <td className="num px-2 py-1.5 text-right">{c.beats_average} su {c.instruments}</td>
+                  <td className="num px-4 py-1.5 text-right">{c.beats_best} su {c.instruments}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="border-t px-4 py-2 text-2xs leading-relaxed text-subtle">
+            Pesi scelti tra cinque varianti fissate in anticipo, sulla prima metà dello storico, e verificati sulla
+            seconda. Nel day trading lo score perde meno delle strategie semplici ma resta negativo per i costi.
+          </p>
+        </section>
+      )}
       {horizons.map((h) => (
         <section key={h} aria-labelledby={`h-${h}`} className="overflow-x-auto rounded-md border bg-card">
           <h2 id={`h-${h}`} className="border-b px-4 py-2 text-2xs font-medium uppercase tracking-wider text-muted-foreground">

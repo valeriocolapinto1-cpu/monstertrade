@@ -10,6 +10,7 @@ from sqlalchemy import Connection, and_, func, select
 
 from app.analysis import indicators as ind
 from app.analysis.compute import compute_all, summary_metrics
+from app.analysis.signals import WEIGHTS
 from app.api.deps import get_conn
 from app.api.schemas import (
     Candle,
@@ -217,7 +218,7 @@ def backtest_report(
     symbol: Annotated[str | None, Query(pattern=r"^[A-Z0-9]{2,16}$")] = None,
 ) -> dict[str, object]:
     """Rapporto del backtest: dal file del job se recente, altrimenti ricalcolato."""
-    from app.jobs.backtest import report_path, run_all, write_report
+    from app.jobs.backtest import report_path, run_report
 
     global _backtest_cache
     now = time.monotonic()
@@ -226,13 +227,67 @@ def backtest_report(
         if path.exists() and time.time() - path.stat().st_mtime < BACKTEST_TTL:
             report = json.loads(path.read_text())
         else:
-            report = write_report(run_all(get_engine()), path)
+            report = run_report(get_engine())
         _backtest_cache = (now, report)
     report = dict(_backtest_cache[1])
     if symbol is not None:
         rows = report.get("results", [])
         report["results"] = [r for r in rows if isinstance(r, dict) and r["symbol"] == symbol]
     return report
+
+
+def _signal_out(row: dict[str, object]) -> dict[str, object]:
+    ts = row["ts"]
+    return {
+        "symbol": row["symbol"],
+        "horizon": row["horizon"],
+        "ts": ts.isoformat() if isinstance(ts, datetime) else ts,
+        "score": row["score"],
+        "components": row["components"],
+        "favorable": row["favorable"],
+        "contrary": row["contrary"],
+        "risk_label": row["risk_label"],
+        "weights": WEIGHTS[str(row["horizon"])],
+    }
+
+
+@router.get("/signals")
+def all_signals(conn: Conn) -> list[dict[str, object]]:
+    """Ultimo score per strumento e orizzonte."""
+    return [_signal_out(r) for r in repo.latest_signals(conn)]
+
+
+@router.get("/instruments/{symbol}/signals")
+def instrument_signals(symbol: Symbol, conn: Conn) -> list[dict[str, object]]:
+    return [_signal_out(r) for r in repo.latest_signals(conn, _instrument_id(conn, symbol))]
+
+
+@router.get("/instruments/{symbol}/sentiment")
+def instrument_sentiment(
+    symbol: Symbol, conn: Conn, days: Annotated[int, Query(ge=1, le=365)] = 30
+) -> dict[str, object]:
+    """Sentiment del sottostante negli ultimi giorni, per fonte."""
+    spec = BY_SYMBOL.get(symbol)
+    if spec is None:
+        raise HTTPException(status_code=404, detail="Strumento non trovato")
+    base = spec.underlying or symbol
+    frame = repo.load_sentiment(conn, _instrument_id(conn, base))
+    if not frame.empty:
+        cutoff = pd.Timestamp(datetime.now(UTC).date()) - pd.Timedelta(days=days)
+        frame = frame[pd.to_datetime(frame["date"]) >= cutoff]
+    return {
+        "symbol": symbol,
+        "underlying": base,
+        "items": [
+            {
+                "date": str(r["date"]),
+                "source": r["source"],
+                "score": round(float(r["score"]), 3),
+                "mentions": int(r["mentions"]),
+            }
+            for r in frame.to_dict("records")
+        ],
+    }
 
 
 @router.get("/quality", response_model=Quality)

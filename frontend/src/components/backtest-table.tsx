@@ -48,7 +48,13 @@ export function BacktestTable({ rows }: { rows: BacktestRow[] }) {
               </thead>
               <tbody>
                 {group.map((r) => (
-                  <tr key={r.strategy} className={cn(r.family === "riferimento" && "text-muted-foreground")}>
+                  <tr
+                    key={r.strategy}
+                    className={cn(
+                      r.family === "riferimento" && "text-muted-foreground",
+                      r.family === "score" && "bg-surface-hover",
+                    )}
+                  >
                     <th scope="row" className="px-4 py-1.5 text-left font-normal">
                       {r.strategy_name}
                       {r.family === "riferimento" && <span className="ml-1 text-subtle">(riferimento)</span>}
