@@ -37,6 +37,29 @@ Prima di mostrare dati reali l'app è protetta:
 - **Segreto condiviso** `API_SHARED_SECRET` tra frontend e API: senza, in produzione l'API risponde 503; con un valore sbagliato 401. Il browser non parla mai direttamente con l'API.
 - In produzione: niente documentazione interattiva dell'API, solo metodi GET, form di accesso accettato solo dallo stesso sito.
 
-## Passo C: ordini (non implementato)
+## Passo C: ordini con conferma (implementato, disattivato di default)
 
-Richiede il **secondo via esplicito** dell'utente. Requisiti già fissati: conferma con un tocco per ogni ordine, limiti rigidi (dimensione massima, numero di ordini, perdita giornaliera), pulsante di blocco totale, registro di ogni ordine, modalità di prova (demo) prima di quella reale, controllo degli ordini pendenti prima di ogni nuovo invio (l'API non garantisce l'idempotenza).
+Gli ordini partono **solo** se tutte queste condizioni sono vere:
+
+1. `ORDERS_MODE` sull'API è `demo` o `live` (default `disabled`: nessun ordine possibile).
+2. È impostata una **chiave separata** con permesso di trading (`T212_ORDER_API_KEY`, `T212_ORDER_API_SECRET`), creata nell'ambiente scelto (conto demo per `demo`, conto reale per `live`). La chiave di sola lettura resta distinta.
+3. Il **blocco totale** è disattivato dalla pagina Portafoglio. Senza impostazione è attivo: dopo un nuovo database gli ordini sono bloccati.
+4. La proposta è attiva, non scaduta, su uno strumento ordinabile (ETF a leva con ticker verificato: SPX3L, SPX3S, NDX3L, NDX3S, NDX2L). Crypto ed ETP crypto non sono ordinabili tramite l'API Invest.
+5. Limiti rigidi rispettati: importo massimo per ordine (`MAX_ORDER_EUR`, default 200 €), ordini al giorno (`MAX_ORDERS_PER_DAY`, default 3), perdita giornaliera del 3% sul conto usato per gli ordini, e tutti i limiti del piano ricalcolati sul conto (1% di rischio, 3 posizioni, 30% in leva 3x, correlazione).
+6. Nessun ordine in attesa sullo stesso strumento e nessun ordine già inviato per la stessa proposta.
+
+### Flusso
+
+1. **Ordina**: il server ripete tutti i controlli, stima la quantità dal prezzo del titolo quotato (Yahoo, ritardo ~15 min, arrotondata per difetto) e restituisce un riepilogo con un codice di conferma valido 90 secondi, legato a proposta, quantità e modalità.
+2. **Conferma ordine** (un tocco): senza quel codice nessun ordine parte. I controlli si ripetono, la riga del registro si scrive **prima** dell'invio, poi ordine a mercato e subito dopo uno stop di vendita (`GOOD_TILL_CANCEL`) calcolato sul prezzo di esecuzione.
+3. **Esiti**: `eseguito`, `inviato`, `rifiutato` (si può riprovare) o `incerto` (timeout o errore del server: **nessun nuovo tentativo**, verifica nell'app Trading 212). Se lo stop non viene accettato l'ordine è segnato "stop da impostare" e va impostato a mano.
+
+### Blocco totale
+
+Il pulsante su Portafoglio blocca subito ogni nuovo ordine. Non annulla gli stop già impostati: lasciano protette le posizioni aperte. Per il blocco più forte: `ORDERS_MODE=disabled` su Render, oppure revoca della chiave ordini nell'app Trading 212.
+
+### Da verificare in modalità demo prima del reale
+
+- Che il conto reale accetti gli ordini stop via API (la documentazione beta lo indica solo per alcuni ambienti); in caso contrario lo stop risulterà "da impostare".
+- Che il ticker risolto automaticamente (es. `3USLl_EQ`) sia quello giusto: si salva in `instruments.t212_ticker` e si può correggere a mano.
+- Quantità frazionarie: alcuni strumenti potrebbero non accettarle (l'ordine verrebbe rifiutato, senza esecuzione).

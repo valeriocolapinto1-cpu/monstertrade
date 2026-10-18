@@ -207,6 +207,7 @@ export function getSentiment(symbol: string, days = 14): Promise<SentimentData> 
 }
 
 export interface Idea {
+  orderable: boolean;
   id: number;
   symbol: string;
   name: string;
@@ -333,3 +334,52 @@ export interface BrokerPortfolio {
 }
 
 export const getBrokerPortfolio = () => apiGet<BrokerPortfolio>("/api/broker/portfolio");
+
+export type OrdersMode = "disabled" | "demo" | "live";
+export type OrderStatus = "in_attesa" | "inviato" | "eseguito" | "rifiutato" | "incerto";
+
+export interface OrderRow {
+  id: number;
+  idea_id: number;
+  symbol: string;
+  mode: "demo" | "live";
+  ticker: string;
+  quantity: number;
+  estimated_eur: number;
+  stop_pct: number;
+  status: OrderStatus;
+  broker_order_id: string | null;
+  fill_price: number | null;
+  stop_status: "attivo" | "da_impostare" | null;
+  stop_price: number | null;
+  error: string | null;
+  created_at: string;
+}
+
+export interface OrdersState {
+  mode: OrdersMode;
+  configured: boolean;
+  kill_switch: boolean;
+  limits: { max_order_eur: number; max_orders_per_day: number; today: number };
+  orders: OrderRow[];
+}
+
+export interface OrderPreview {
+  idea_id: number;
+  mode: "demo" | "live";
+  symbol: string;
+  name: string;
+  ticker: string;
+  quantity: number;
+  price: number;
+  currency: string;
+  estimated_eur: number;
+  stop_pct: number;
+  stop_price: number;
+  risk_eur: number;
+  max_order_eur: number;
+  token: string;
+  expires_in: number;
+}
+
+export const getOrders = () => apiGet<OrdersState>("/api/orders");

@@ -42,3 +42,4 @@ Solo in variabili d'ambiente lato server (Render, GitHub Actions secrets). Mai n
 
 - App protetta da password (hash scrypt) e sessione firmata `HttpOnly`/`SameSite=Strict`; API raggiungibile solo con il segreto condiviso, verificato in un middleware prima di qualsiasi altra operazione.
 - Trading 212 in sola lettura: chiave con soli permessi di lettura, solo richieste GET, errori che non riportano mai credenziali. Dettagli in `docs/trading212.md`.
+- Ordini (passo C): disattivati di default, chiave di trading separata, blocco totale attivo se mai disattivato, conferma esplicita con codice firmato a scadenza (90 s) per ogni ordine, limiti rigidi ricontrollati lato server, registro scritto prima di ogni invio, nessun nuovo tentativo automatico. Le scritture passano solo dal server del frontend (sessione, stessa origine, JSON validato) e dall'API con segreto condiviso. Test dedicati in `backend/tests/test_orders.py` e `frontend/src/lib/orders.test.ts`.

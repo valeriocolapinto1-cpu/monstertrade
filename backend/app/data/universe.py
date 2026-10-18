@@ -39,7 +39,14 @@ class InstrumentSpec:
     # Costo annuo dello strumento (TER) usato nella serie sintetica.
     ter: float = 0.0
     reference_ticker: str | None = None
+    # Simbolo Yahoo del titolo quotato, usato solo per stimare la quantità di un ordine.
+    quote_symbol: str | None = None
     sources: tuple[SourceRef, ...] = field(default_factory=tuple)
+
+    @property
+    def orderable(self) -> bool:
+        """Ordinabile su Trading 212 Invest: ticker verificato e prezzo reale disponibile."""
+        return bool(self.quote_symbol and self.reference_ticker)
 
     @property
     def synthetic(self) -> bool:
@@ -47,7 +54,14 @@ class InstrumentSpec:
 
 
 def _lev(
-    symbol: str, name: str, underlying: str, leverage: float, ter: float, ticker: str, ccy: str
+    symbol: str,
+    name: str,
+    underlying: str,
+    leverage: float,
+    ter: float,
+    ticker: str,
+    ccy: str,
+    quote: str | None = None,
 ) -> InstrumentSpec:
     return InstrumentSpec(
         symbol=symbol,
@@ -59,6 +73,7 @@ def _lev(
         underlying=underlying,
         ter=ter,
         reference_ticker=ticker,
+        quote_symbol=quote,
     )
 
 
@@ -87,11 +102,11 @@ UNIVERSE: tuple[InstrumentSpec, ...] = (
         Calendar.NYSE,
         sources=(SourceRef("twelvedata", "SOX"), SourceRef("yfinance", "^SOX")),
     ),
-    _lev("SPX3L", "S&P 500 3x Long", "SPX", 3, 0.0075, "3USL", "USD"),
-    _lev("SPX3S", "S&P 500 3x Short", "SPX", -3, 0.0080, "3USS", "USD"),
-    _lev("NDX3L", "Nasdaq 100 3x Long", "NDX", 3, 0.0075, "QQQ3", "USD"),
-    _lev("NDX3S", "Nasdaq 100 3x Short", "NDX", -3, 0.0080, "QQQS", "USD"),
-    _lev("NDX2L", "Nasdaq 100 2x Long", "NDX", 2, 0.0060, "LQQ", "EUR"),
+    _lev("SPX3L", "S&P 500 3x Long", "SPX", 3, 0.0075, "3USL", "USD", "3USL.L"),
+    _lev("SPX3S", "S&P 500 3x Short", "SPX", -3, 0.0080, "3USS", "USD", "3USS.L"),
+    _lev("NDX3L", "Nasdaq 100 3x Long", "NDX", 3, 0.0075, "QQQ3", "USD", "QQQ3.L"),
+    _lev("NDX3S", "Nasdaq 100 3x Short", "NDX", -3, 0.0080, "QQQS", "USD", "QQQS.L"),
+    _lev("NDX2L", "Nasdaq 100 2x Long", "NDX", 2, 0.0060, "LQQ", "EUR", "LQQ.PA"),
     _lev("SOX3L", "Semiconduttori 3x Long", "SOX", 3, 0.0075, "da verificare", "USD"),
     InstrumentSpec(
         "BTC",

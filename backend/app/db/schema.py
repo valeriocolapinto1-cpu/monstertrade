@@ -6,6 +6,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     MetaData,
     String,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -198,8 +200,56 @@ broker_snapshots = Table(
     "broker_snapshots",
     metadata,
     Column("day", Date, primary_key=True),
+    # Conto letto: "live" (reale) o "demo" (prova), per non mescolare i valori.
+    Column("env", String(8), primary_key=True, server_default="live"),
     Column("first_seen", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("total", Float, nullable=False),
     Column("cash", Float, nullable=False),
     Column("invested", Float, nullable=False),
+)
+
+# Registro di ogni ordine: la riga si scrive PRIMA dell'invio e non si cancella mai.
+orders = Table(
+    "orders",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("idea_id", Integer, ForeignKey("trade_ideas.id", ondelete="RESTRICT"), nullable=False),
+    Column("mode", String(8), nullable=False),
+    Column("ticker", String(32), nullable=False),
+    Column("quantity", Float, nullable=False),
+    Column("estimated_eur", Float, nullable=False),
+    Column("stop_pct", Float, nullable=False),
+    Column("status", String(12), nullable=False, server_default="in_attesa"),
+    Column("broker_order_id", String(64), nullable=True),
+    Column("fill_price", Float, nullable=True),
+    Column("stop_status", String(16), nullable=True),
+    Column("stop_price", Float, nullable=True),
+    Column("stop_order_id", String(64), nullable=True),
+    Column("error", Text, nullable=True),
+    Column("request", JSONB, nullable=False, server_default="{}"),
+    Column("response", JSONB, nullable=False, server_default="{}"),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint("mode IN ('demo', 'live')", name="mode_valid"),
+    CheckConstraint(
+        "status IN ('in_attesa', 'inviato', 'eseguito', 'rifiutato', 'incerto')",
+        name="status_valid",
+    ),
+    CheckConstraint("quantity > 0 AND estimated_eur > 0", name="amounts_valid"),
+    # Una sola richiesta valida per proposta: ritentare è possibile solo se rifiutata.
+    Index(
+        "uq_orders_idea_active",
+        "idea_id",
+        unique=True,
+        postgresql_where=text("status <> 'rifiutato'"),
+    ),
+)
+
+# Comandi persistenti. Senza riga il blocco totale è ATTIVO (impostazione sicura).
+controls = Table(
+    "controls",
+    metadata,
+    Column("key", String(32), primary_key=True),
+    Column("active", Boolean, nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
