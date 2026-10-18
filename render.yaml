@@ -19,3 +19,13 @@ services:
         sync: false
       - key: CORS_ORIGINS
         sync: false
+      # Segreto condiviso con il frontend (Vercel): senza, l'API rifiuta ogni richiesta.
+      - key: API_SHARED_SECRET
+        sync: false
+      # Trading 212, sola lettura (Fase 5, passo B).
+      - key: T212_API_KEY
+        sync: false
+      - key: T212_API_SECRET
+        sync: false
+      - key: T212_ENV
+        value: live

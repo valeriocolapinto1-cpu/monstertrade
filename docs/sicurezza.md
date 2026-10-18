@@ -37,3 +37,8 @@ In Settings → Code security attivare anche Secret scanning e Push protection.
 ## Segreti
 
 Solo in variabili d'ambiente lato server (Render, GitHub Actions secrets). Mai nel browser, nel repository o nei log; nel backend sono `SecretStr`, quindi mascherati in `repr` e serializzazione.
+
+## Accesso e conto reale (Fase 5)
+
+- App protetta da password (hash scrypt) e sessione firmata `HttpOnly`/`SameSite=Strict`; API raggiungibile solo con il segreto condiviso, verificato in un middleware prima di qualsiasi altra operazione.
+- Trading 212 in sola lettura: chiave con soli permessi di lettura, solo richieste GET, errori che non riportano mai credenziali. Dettagli in `docs/trading212.md`.

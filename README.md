@@ -10,7 +10,7 @@ Piano: [`docs/PIANO.md`](docs/PIANO.md) · Regole di lavoro: [`CLAUDE.md`](CLAUD
 | 2. Indicatori e backtesting | completata | [`docs/indicatori-backtest.md`](docs/indicatori-backtest.md) |
 | 3. Sentiment e score | completata | [`docs/sentiment-score.md`](docs/sentiment-score.md) |
 | 4. Simulazione e rischio | completata, simulazione da avviare | [`docs/simulazione.md`](docs/simulazione.md) |
-| 5. Trading 212 | non iniziata: richiede il via esplicito | — |
+| 5. Trading 212 | passo B (lettura del conto) completato; ordini non implementati | [`docs/trading212.md`](docs/trading212.md) |
 
 ## Struttura
 
@@ -46,6 +46,9 @@ npm ci
 | `FINNHUB_API_KEY`, `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` | job sentiment | no | Fonti aggiuntive di sentiment |
 | `NTFY_TOPIC` | job trading | no | Notifiche delle nuove proposte |
 | `API_URL` | frontend (server) | sì in produzione | URL dell'API, mai esposto al browser |
+| `API_SHARED_SECRET` | backend e frontend | sì in produzione | Stesso valore sui due lati; senza, l'API rifiuta tutto |
+| `APP_PASSWORD_HASH`, `SESSION_SECRET` | frontend | sì in produzione | Password dell'app (`node frontend/scripts/hash-password.mjs`) e firma delle sessioni |
+| `T212_API_KEY`, `T212_API_SECRET`, `T212_ENV` | backend, job trading | no | Trading 212 in sola lettura (`live` o `demo`) |
 
 Tutte le chiavi restano lato server: nei secrets di GitHub Actions e nelle variabili di Render/Vercel.
 
@@ -82,6 +85,8 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 ## Come fermare tutto in sicurezza
 
 L'app non invia ordini, quindi fermarla non lascia posizioni reali aperte. In ordine:
+
+0. **Trading 212**: revoca la chiave API dall'app Trading 212 (Impostazioni → API): l'accesso al conto si interrompe subito, qualunque cosa succeda all'app.
 
 1. **Job pianificati**: GitHub → Actions → "Aggiornamento dati" e "Sentiment" → menu `…` → *Disable workflow*. In alternativa togli il secret `DATABASE_URL`: i job si saltano da soli.
 2. **API**: Render → servizio `monstertrade-api` → *Suspend*.

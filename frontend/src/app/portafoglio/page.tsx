@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/badge";
 import { Kpi, KpiStrip } from "@/components/kpi";
-import { getPortfolio } from "@/lib/api";
+import { type BrokerPortfolio, getBrokerPortfolio, getPortfolio } from "@/lib/api";
 import { formatEur, formatNumber, formatPercent, formatPrice } from "@/lib/format";
 import { leverageLabel } from "@/lib/instruments";
 import { HORIZON_SHORT } from "@/lib/labels";
@@ -12,15 +12,21 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = { title: "Portafoglio" };
 
 export default async function PortafoglioPage() {
-  const p = await getPortfolio();
+  const [p, broker] = await Promise.all([
+    getPortfolio(),
+    getBrokerPortfolio().catch((e: unknown) => ({ configured: true, error: String(e) }) as BrokerPortfolio & { error?: string }),
+  ]);
   const loss = Math.max(-p.day_pnl, 0);
   const symbols = p.positions.map((x) => x.symbol);
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Portafoglio e rischio</h1>
-        <p className="text-xs text-muted-foreground">Posizioni simulate · prezzi di chiusura</p>
+        <p className="text-xs text-muted-foreground">Conto reale in sola lettura e simulazione</p>
       </div>
+      <RealAccount data={broker} />
+
+      <h2 className="pt-2 text-2xs font-medium uppercase tracking-wider text-muted-foreground">Simulazione</h2>
       <KpiStrip>
         <Kpi
           label="Capitale"
@@ -128,5 +134,88 @@ export default async function PortafoglioPage() {
         </section>
       )}
     </div>
+  );
+}
+
+function RealAccount({ data }: { data: BrokerPortfolio & { error?: string } }) {
+  if (!data.configured) {
+    return (
+      <p className="rounded-md border bg-card px-4 py-3 text-xs text-muted-foreground">
+        Conto Trading 212 non collegato. Imposta T212_API_KEY e T212_API_SECRET sull&apos;API (solo lettura) per
+        calcolare il rischio sul conto reale.
+      </p>
+    );
+  }
+  if (data.error || !data.summary || !data.risk) {
+    return (
+      <p role="alert" className="rounded-md border border-warn/40 bg-warn-muted px-4 py-3 text-xs text-warn">
+        Conto Trading 212 non raggiungibile: il rischio si calcola sulla simulazione finché non torna disponibile.
+      </p>
+    );
+  }
+  const { summary, risk } = data;
+  const loss = Math.max(-risk.day_pnl, 0);
+  return (
+    <section aria-labelledby="conto" className="space-y-3">
+      <h2 id="conto" className="flex items-center gap-2 text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+        Conto Trading 212 · {data.env === "live" ? "reale" : "demo"}
+        <span className="rounded-sm border border-border-strong px-1 py-px normal-case tracking-normal">sola lettura</span>
+      </h2>
+      <KpiStrip>
+        <Kpi label="Valore del conto" value={formatEur(summary.total)} sub={`liquidità ${formatEur(summary.cash)}`} />
+        <Kpi
+          label="Risultato del giorno"
+          value={formatEur(risk.day_pnl)}
+          sub={`limite ${formatEur(risk.day_pnl_limit)}`}
+          tone={risk.day_pnl < 0 ? "down" : risk.day_pnl > 0 ? "up" : undefined}
+          meter={{ value: loss, max: -risk.day_pnl_limit, warn: risk.daily_limit_reached }}
+        />
+        <Kpi
+          label="Esposizione leva 3x"
+          value={formatEur(risk.lev3_exposure)}
+          sub={`limite ${formatEur(risk.lev3_limit)}`}
+          meter={{ value: risk.lev3_exposure, max: risk.lev3_limit, warn: risk.lev3_exposure > risk.lev3_limit }}
+        />
+        <Kpi
+          label="Posizioni"
+          value={`${risk.positions} / ${risk.max_positions}`}
+          sub={`rischio per trade ${formatEur(risk.risk_per_trade)}`}
+          meter={{ value: risk.positions, max: risk.max_positions, warn: risk.positions > risk.max_positions }}
+        />
+      </KpiStrip>
+      {data.positions && data.positions.length > 0 && (
+        <div className="overflow-x-auto rounded-md border bg-card">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead>
+              <tr className="text-2xs uppercase tracking-wider text-subtle">
+                <th scope="col" className="px-4 py-2 text-left font-medium">Ticker</th>
+                <th scope="col" className="px-2 py-2 text-right font-medium">Quantità</th>
+                <th scope="col" className="px-2 py-2 text-right font-medium">Prezzo medio</th>
+                <th scope="col" className="px-2 py-2 text-right font-medium">Attuale</th>
+                <th scope="col" className="px-2 py-2 text-right font-medium">Valore</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Risultato</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {data.positions.map((x) => (
+                <tr key={x.ticker}>
+                  <th scope="row" className="px-4 py-2.5 text-left font-normal">
+                    <span className="num">{x.ticker}</span>
+                    <span className="block text-2xs text-subtle">
+                      {x.name ? `${x.name}${x.leverage && x.leverage !== 1 ? ` · ${leverageLabel(x.leverage)}` : ""}` : "fuori dall'universo"}
+                    </span>
+                  </th>
+                  <td className="num px-2 py-2.5 text-right">{formatNumber(x.quantity, 4)}</td>
+                  <td className="num px-2 py-2.5 text-right">{formatPrice(x.average_price)}</td>
+                  <td className="num px-2 py-2.5 text-right">{formatPrice(x.current_price)}</td>
+                  <td className="num px-2 py-2.5 text-right">{formatEur(x.value)}</td>
+                  <td className={cn("num px-4 py-2.5 text-right", x.pnl >= 0 ? "text-up" : "text-down")}>{formatEur(x.pnl)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

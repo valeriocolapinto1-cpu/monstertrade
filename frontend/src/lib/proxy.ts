@@ -1,6 +1,6 @@
 import "server-only";
 
-import { apiBase, SYMBOL_PATTERN } from "@/lib/api";
+import { apiBase, apiHeaders, requireSession, SYMBOL_PATTERN } from "@/lib/api";
 import { isTimeframe } from "@/lib/instruments";
 
 /** Inoltra al backend una richiesta per simbolo validando timeframe e limite. */
@@ -19,10 +19,12 @@ export async function proxySymbolGet(
     limit >= 10 &&
     limit <= 5000;
   if (!valid) return Response.json({ detail: "Parametri non validi" }, { status: 400 });
+  await requireSession();
   const query = new URLSearchParams({ timeframe, limit: String(limit) });
   try {
     const upstream = await fetch(`${apiBase()}/api/instruments/${symbol}/${resource}?${query}`, {
       cache: "no-store",
+      headers: apiHeaders(),
       signal: AbortSignal.timeout(20_000),
     });
     return new Response(await upstream.text(), {

@@ -217,9 +217,28 @@ def candidate_warnings(spec: InstrumentSpec, horizon: str, adx: float | None) ->
     return out
 
 
-def evaluate(conn: Connection, cfg: RiskConfig) -> tuple[list[Candidate], PortfolioState]:
-    """Valuta tutti gli score sopra la soglia applicando i limiti, dal più forte al più debole."""
+def current_state(conn: Connection, cfg: RiskConfig, use_broker: bool = True) -> PortfolioState:
+    """Rischio sul conto reale se Trading 212 è configurato, altrimenti sulla simulazione."""
+    from app.broker.service import get_broker, real_state
+    from app.broker.trading212 import BrokerError
+
+    broker = get_broker() if use_broker else None
+    if broker is not None:
+        try:
+            state = real_state(conn, broker.snapshot())
+            state.source = "conto"
+            return state
+        except BrokerError:
+            pass  # Broker non raggiungibile: si ricade sulla simulazione, mai sul niente.
     state, _ = portfolio_state(conn, cfg)
+    return state
+
+
+def evaluate(
+    conn: Connection, cfg: RiskConfig, use_broker: bool = True
+) -> tuple[list[Candidate], PortfolioState]:
+    """Valuta tutti gli score sopra la soglia applicando i limiti, dal più forte al più debole."""
+    state = current_state(conn, cfg, use_broker)
     ids = repo.instrument_ids(conn)
     pending = conn.execute(
         select(instruments.c.symbol, instruments.c.leverage, trade_ideas.c.size_eur)

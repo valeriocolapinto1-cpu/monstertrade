@@ -1,5 +1,23 @@
 import "server-only";
 
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { authConfig, SESSION_COOKIE, verifySessionToken } from "@/lib/session";
+
+/** Seconda verifica della sessione, oltre al proxy, prima di ogni lettura di dati. */
+export async function requireSession(): Promise<void> {
+  // Leggere i cookie rende la pagina dinamica: niente dati nel prerender della build.
+  const jar = await cookies();
+  const { enabled, secret, misconfigured } = authConfig();
+  if (misconfigured) throw new Error("Accesso non configurato");
+  if (!enabled) return;
+  const token = jar.get(SESSION_COOKIE)?.value;
+  if (!(await verifySessionToken(token, secret, Math.floor(Date.now() / 1000)))) {
+    redirect("/accesso");
+  }
+}
+
 export type InstrumentKind = "index" | "leveraged_etf" | "crypto" | "crypto_etp";
 
 export interface Instrument {
@@ -50,9 +68,17 @@ export function apiBase(): string {
 
 export const SYMBOL_PATTERN = /^[A-Z0-9]{2,16}$/;
 
+/** Intestazioni per il backend: il segreto condiviso resta solo lato server. */
+export function apiHeaders(): Record<string, string> {
+  const secret = process.env.API_SHARED_SECRET;
+  return secret ? { "X-API-Key": secret } : {};
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
+  await requireSession();
   const response = await fetch(`${apiBase()}${path}`, {
     cache: "no-store",
+    headers: apiHeaders(),
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) {
@@ -203,6 +229,7 @@ export interface Idea {
 
 export interface Today {
   generated_at: string;
+  risk_source: "simulazione" | "conto";
   capital: number;
   equity: number;
   day_pnl: number;
@@ -274,3 +301,35 @@ export interface Journal {
 export const getToday = () => apiGet<Today>("/api/today");
 export const getPortfolio = () => apiGet<Portfolio>("/api/portfolio");
 export const getJournal = () => apiGet<Journal>("/api/journal");
+
+export interface BrokerPosition {
+  ticker: string;
+  symbol: string | null;
+  name: string | null;
+  leverage: number | null;
+  quantity: number;
+  average_price: number;
+  current_price: number;
+  value: number;
+  pnl: number;
+}
+
+export interface BrokerPortfolio {
+  configured: boolean;
+  env?: "live" | "demo";
+  read_only?: boolean;
+  summary?: { currency: string; total: number; cash: number; invested: number; unrealized_pnl: number };
+  risk?: {
+    day_pnl: number;
+    day_pnl_limit: number;
+    daily_limit_reached: boolean;
+    positions: number;
+    max_positions: number;
+    lev3_exposure: number;
+    lev3_limit: number;
+    risk_per_trade: number;
+  };
+  positions?: BrokerPosition[];
+}
+
+export const getBrokerPortfolio = () => apiGet<BrokerPortfolio>("/api/broker/portfolio");
