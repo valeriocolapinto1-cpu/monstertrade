@@ -31,7 +31,12 @@ def engine() -> Iterator[Engine]:
         pytest.skip("TEST_DATABASE_URL non impostata")
     eng = make_engine(TEST_DB)
     with eng.begin() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS prices, instruments, alembic_version CASCADE"))
+        conn.execute(
+            text(
+                "DROP TABLE IF EXISTS trades, trade_ideas, signals, sentiment, indicators, prices, "
+                "instruments, alembic_version CASCADE"
+            )
+        )
     metadata.create_all(eng)
     yield eng
     metadata.drop_all(eng)

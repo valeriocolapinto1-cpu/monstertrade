@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     cache_dir: Path = Path(".cache")
     # Tasso annuo usato per il costo di finanziamento degli ETF a leva sintetici.
     funding_rate: float = Field(default=0.04, ge=0, le=0.2)
+    # Gestione del rischio (uso personale, capitale 500-2.000 euro).
+    capital_eur: float = Field(default=1000.0, ge=500, le=2000)
+    risk_per_trade: float = Field(default=0.01, gt=0, le=0.01)
+    max_daily_loss: float = Field(default=0.03, gt=0, le=0.03)
+    max_open_positions: int = Field(default=3, ge=1, le=3)
+    max_lev3_exposure: float = Field(default=0.30, gt=0, le=0.30)
+    max_correlation: float = Field(default=0.80, gt=0, le=1)
+    min_order_eur: float = Field(default=10.0, ge=1)
+    # Notifiche delle nuove proposte (facoltative) con ntfy.sh: argomento privato.
+    ntfy_topic: SecretStr | None = None
 
 
 @lru_cache

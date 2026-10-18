@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "MonsterTrade",
     description: "Analisi tecnica e sentiment per uso personale",
     lang: "it",
-    start_url: "/strumenti",
+    start_url: "/oggi",
     scope: "/",
     display: "standalone",
     orientation: "any",

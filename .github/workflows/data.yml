@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   update:
-    name: Prezzi, indicatori, score e qualità
+    name: Prezzi, indicatori, score, proposte e qualità
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -54,6 +54,12 @@ jobs:
       - if: steps.check.outputs.skip != 'true'
         name: Score e segnali
         run: uv run --no-dev python -m app.jobs.signals
+      - if: steps.check.outputs.skip != 'true'
+        name: Proposte e simulazione
+        env:
+          CAPITAL_EUR: ${{ vars.CAPITAL_EUR || '1000' }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: uv run --no-dev python -m app.jobs.trading
       - if: steps.check.outputs.skip != 'true'
         name: Controllo qualità
         run: uv run --no-dev python -m app.jobs.prices quality > "$RUNNER_TEMP/quality.json" || echo "::warning::Dati incompleti, vedi rapporto"
