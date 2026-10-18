@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Segnaposto documentati, non segreti"
+paths = ['''\.env\.example$''']
