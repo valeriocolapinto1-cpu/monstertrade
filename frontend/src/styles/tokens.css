@@ -1,0 +1,75 @@
+/*
+ * Token di stile: unica fonte di colori, tipografia, spaziature, raggi e movimento.
+ * I componenti usano solo queste variabili (direttamente o tramite le classi Tailwind
+ * mappate in globals.css). I grafici le leggono a runtime con getComputedStyle.
+ *
+ * Accento ricavato dal logo Trading 212 (#00A7E1). Verde e rosso solo per rialzo e
+ * ribasso, ambra solo per gli avvisi di rischio.
+ */
+:root {
+  /* Superfici: sfondo quasi nero-bluastro, un solo livello di elevazione in più */
+  --mt-bg: #0a0d13;
+  --mt-surface: #11151d;
+  --mt-surface-hover: #161b25;
+  --mt-overlay: #161b25;
+
+  /* Bordi sottili */
+  --mt-border: #1d2330;
+  --mt-border-strong: #2a3140;
+
+  /* Testo */
+  --mt-text: #e5e9f0;
+  --mt-text-muted: #8b93a3;
+  --mt-text-subtle: #5d6575;
+
+  /* Accento unico */
+  --mt-accent: #00a7e1;
+  --mt-accent-hover: #1fb5ea;
+  --mt-accent-muted: rgb(0 167 225 / 14%);
+  --mt-on-accent: #031018;
+
+  /* Semantici */
+  --mt-up: #22b07d;
+  --mt-up-muted: rgb(34 176 125 / 14%);
+  --mt-down: #f0475a;
+  --mt-down-muted: rgb(240 71 90 / 14%);
+  --mt-warn: #f2a93b;
+  --mt-warn-muted: rgb(242 169 59 / 14%);
+
+  /* Grafici */
+  --mt-chart-grid: #161b25;
+  --mt-chart-crosshair: #5d6575;
+  --mt-chart-series-1: #00a7e1;
+  --mt-chart-series-2: #b48cf2;
+  --mt-chart-series-3: #e5c07b;
+  --mt-chart-series-4: #8b93a3;
+
+  /* Tipografia */
+  --mt-font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --mt-font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --mt-text-2xs: 0.6875rem; /* 11px: etichette */
+  --mt-text-xs: 0.75rem; /* 12px */
+  --mt-text-sm: 0.8125rem; /* 13px: testo base dati */
+  --mt-text-md: 0.875rem; /* 14px */
+  --mt-text-lg: 1rem; /* 16px */
+  --mt-text-xl: 1.25rem; /* 20px: titoli di sezione */
+  --mt-text-2xl: 1.5rem; /* 24px */
+  --mt-text-3xl: 2rem; /* 32px: prezzo principale */
+
+  /* Spaziature (base 4px) */
+  --mt-space-1: 0.25rem;
+  --mt-space-2: 0.5rem;
+  --mt-space-3: 0.75rem;
+  --mt-space-4: 1rem;
+  --mt-space-6: 1.5rem;
+  --mt-space-8: 2rem;
+
+  /* Raggi: contenuti, non arrotondati ovunque */
+  --mt-radius-sm: 4px;
+  --mt-radius: 6px;
+  --mt-radius-lg: 8px;
+
+  /* Movimento */
+  --mt-duration: 160ms;
+  --mt-ease: cubic-bezier(0.2, 0, 0, 1);
+}

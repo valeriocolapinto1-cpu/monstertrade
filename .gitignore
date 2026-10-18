@@ -1,0 +1,34 @@
+# Segreti: mai nel repository
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+.vercel/
+
+# Dati locali e modelli
+data/
+*.parquet
+models/
+
+# Sistema
+.DS_Store
+*.log
