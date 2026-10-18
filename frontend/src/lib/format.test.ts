@@ -26,3 +26,16 @@ describe("formato italiano", () => {
     expect(trendOf(0)).toBe("flat");
   });
 });
+
+describe("prezzi e date", () => {
+  it("decimali in base al valore", async () => {
+    const { formatPrice } = await import("./format");
+    expect(formatPrice(7659.44)).toBe("7.659,44");
+    expect(formatPrice(0.12345)).toBe("0,1235");
+  });
+
+  it("data in italiano", async () => {
+    const { formatDate } = await import("./format");
+    expect(formatDate("2026-10-16T00:00:00Z")).toBe("16 ott 2026");
+  });
+});
