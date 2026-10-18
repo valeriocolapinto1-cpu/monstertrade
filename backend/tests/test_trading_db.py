@@ -170,3 +170,50 @@ def test_daily_loss_blocks_new_proposals(engine: Engine, client: TestClient) -> 
 def _id(engine: Engine, symbol: str) -> int:
     with engine.connect() as conn:
         return repo.instrument_ids(conn)[symbol]
+
+
+class FakeBroker:
+    def __init__(self, positions: list[tuple[str, float]], total: float = 1200.0) -> None:
+        from app.broker.trading212 import AccountSummary, BrokerPosition, BrokerSnapshot
+
+        self.broker = type("B", (), {"env": "live"})()
+        self._snap = BrokerSnapshot(
+            0.0,
+            AccountSummary(
+                "EUR",
+                total,
+                total - sum(v for _, v in positions),
+                sum(v for _, v in positions),
+                0.0,
+            ),
+            [BrokerPosition(t, 1.0, v, v, v, 0.0) for t, v in positions],
+        )
+
+    def snapshot(self):  # type: ignore[no-untyped-def]
+        return self._snap
+
+
+def test_real_account_drives_risk(
+    engine: Engine, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.api import broker as broker_api
+    from app.broker import service
+
+    fake = FakeBroker([("3USLl_EQ", 300.0), ("AAPL_US_EQ", 100.0), ("QQQSl_EQ", 50.0)])
+    monkeypatch.setattr(service, "get_broker", lambda: fake)
+    monkeypatch.setattr(broker_api, "get_broker", lambda: fake)
+    run_update(engine, FakeRegistry(), now=NOW)
+    strong_signal(engine, "SPX", "swing", 60.0)
+
+    data = client.get("/api/broker/portfolio").json()
+    assert data["configured"] and data["read_only"]
+    assert [p["symbol"] for p in data["positions"]] == ["SPX3L", None, "NDX3S"]
+    assert data["risk"]["lev3_exposure"] == 350.0  # 3x long e short
+    assert data["risk"]["lev3_limit"] == pytest.approx(360.0)
+    assert data["risk"]["positions"] == 3
+
+    # Tre posizioni reali: nessuna nuova proposta.
+    assert trading_job.run(engine, now=NOW, send=False)["proposte"] == 0
+    today = client.get("/api/today").json()
+    assert today["risk_source"] == "conto"
+    assert any("3 posizioni" in s["reason"] for s in today["skipped"])

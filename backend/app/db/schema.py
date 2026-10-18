@@ -193,3 +193,13 @@ trades = Table(
     ),
     CheckConstraint("entry_price > 0 AND size_eur > 0", name="amounts_valid"),
 )
+
+broker_snapshots = Table(
+    "broker_snapshots",
+    metadata,
+    Column("day", Date, primary_key=True),
+    Column("first_seen", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("total", Float, nullable=False),
+    Column("cash", Float, nullable=False),
+    Column("invested", Float, nullable=False),
+)

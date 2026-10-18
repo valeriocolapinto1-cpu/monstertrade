@@ -12,7 +12,13 @@ from app.api.deps import get_conn
 from app.config import get_settings
 from app.data.universe import BY_SYMBOL
 from app.db.schema import instruments, trade_ideas, trades
-from app.trading.engine import correlations, evaluate, portfolio_state, risk_config
+from app.trading.engine import (
+    correlations,
+    current_state,
+    evaluate,
+    portfolio_state,
+    risk_config,
+)
 from app.trading.risk import Rejection, daily_limit_reached
 
 router = APIRouter(prefix="/api")
@@ -56,7 +62,6 @@ def _ideas_query() -> Select[Any]:
 @router.get("/today")
 def today(conn: Conn) -> dict[str, object]:
     cfg = risk_config(get_settings())
-    state, _ = portfolio_state(conn, cfg)
     active = (
         conn.execute(
             _ideas_query()
@@ -67,6 +72,7 @@ def today(conn: Conn) -> dict[str, object]:
         .all()
     )
     candidates, _ = evaluate(conn, cfg)
+    state = current_state(conn, cfg)
     skipped = [
         {
             "symbol": c.spec.symbol,
@@ -80,7 +86,10 @@ def today(conn: Conn) -> dict[str, object]:
     ]
     return {
         "generated_at": datetime.now(UTC).isoformat(),
-        "capital": cfg.capital,
+        "risk_source": state.source,
+        "capital": cfg.capital
+        if state.source == "simulazione"
+        else round(state.day_start_equity, 2),
         "equity": round(state.equity, 2),
         "day_pnl": round(state.day_pnl, 2),
         "daily_limit_reached": daily_limit_reached(state, cfg),

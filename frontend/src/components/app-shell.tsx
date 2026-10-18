@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { LogoutButton } from "@/components/logout-button";
 import { NavLinks } from "@/components/nav-links";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             MonsterTrade
           </Link>
           <NavLinks variant="top" />
+          <LogoutButton />
         </div>
       </header>
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:py-6">{children}</main>

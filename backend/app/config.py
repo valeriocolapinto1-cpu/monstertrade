@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     min_order_eur: float = Field(default=10.0, ge=1)
     # Notifiche delle nuove proposte (facoltative) con ntfy.sh: argomento privato.
     ntfy_topic: SecretStr | None = None
+    # Segreto condiviso con il frontend: senza, in produzione l'API rifiuta ogni richiesta.
+    api_shared_secret: SecretStr | None = None
+    # Trading 212 (Fase 5, passo B: sola lettura del conto Invest).
+    t212_api_key: SecretStr | None = None
+    t212_api_secret: SecretStr | None = None
+    t212_env: str = Field(default="live", pattern="^(live|demo)$")
 
 
 @lru_cache

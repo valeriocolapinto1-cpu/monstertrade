@@ -43,6 +43,8 @@ class PortfolioState:
     equity: float
     day_start_equity: float
     open_positions: list[OpenPosition] = field(default_factory=list)
+    # "simulazione" (diario) oppure "conto" (Trading 212, sola lettura).
+    source: str = "simulazione"
 
     @property
     def day_pnl(self) -> float:

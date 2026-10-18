@@ -18,12 +18,13 @@ export default async function OggiPage() {
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Oggi</h1>
         <p className="text-xs text-muted-foreground">
-          Simulazione: nessun ordine viene inviato al broker
+          Rischio calcolato su: {t.risk_source === "conto" ? "conto Trading 212 (sola lettura)" : "simulazione"} ·
+          nessun ordine viene inviato al broker
         </p>
       </div>
       <KpiStrip>
         <Kpi
-          label="Capitale simulato"
+          label={t.risk_source === "conto" ? "Conto a inizio giornata" : "Capitale simulato"}
           value={formatEur(t.equity)}
           sub={`iniziale ${formatEur(t.capital)}`}
           tone={t.equity > t.capital ? "up" : t.equity < t.capital ? "down" : undefined}
