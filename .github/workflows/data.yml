@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   update:
-    name: Prezzi e qualità
+    name: Prezzi, indicatori e qualità
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -48,6 +48,9 @@ jobs:
       - if: steps.check.outputs.skip != 'true'
         name: Aggiornamento prezzi
         run: uv run --no-dev python -m app.jobs.prices update
+      - if: steps.check.outputs.skip != 'true'
+        name: Indicatori
+        run: uv run --no-dev python -m app.jobs.indicators
       - if: steps.check.outputs.skip != 'true'
         name: Controllo qualità
         run: uv run --no-dev python -m app.jobs.prices quality > "$RUNNER_TEMP/quality.json" || echo "::warning::Dati incompleti, vedi rapporto"

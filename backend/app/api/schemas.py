@@ -51,3 +51,26 @@ class Quality(BaseModel):
     generated_at: datetime
     complete: bool
     items: list[QualityItem]
+
+
+class LevelOut(BaseModel):
+    price: float
+    touches: int
+    kind: str
+
+
+class Indicators(BaseModel):
+    symbol: str
+    timeframe: str
+    time: list[int]
+    series: dict[str, list[float | None]]
+    levels: list[LevelOut]
+    fibonacci: dict[str, float] | None
+    metrics: dict[str, float | None]
+    latest: dict[str, float | None]
+
+
+class Correlations(BaseModel):
+    window: int
+    symbols: list[str]
+    matrix: list[list[float | None]]

@@ -68,3 +68,56 @@ export function getInstruments(): Promise<Instrument[]> {
 export function getQuality(): Promise<Quality> {
   return apiGet<Quality>("/api/quality");
 }
+
+export interface IndicatorSnapshot {
+  time: number[];
+  metrics: Record<string, number | null>;
+  latest: Record<string, number | null>;
+}
+
+export interface BacktestRow {
+  symbol: string;
+  horizon: "day" | "swing" | "long";
+  strategy: string;
+  strategy_name: string;
+  family: "trend" | "momentum" | "riferimento";
+  start: string;
+  end: string;
+  bars: number;
+  total_return: number | null;
+  cagr: number | null;
+  sharpe: number | null;
+  max_drawdown: number | null;
+  trades: number;
+  win_rate: number | null;
+  exposure: number | null;
+  costs_paid: number | null;
+  first_half: number | null;
+  second_half: number | null;
+}
+
+export interface BacktestReport {
+  generated_at: string;
+  criterion_met: boolean;
+  positive_strategies: number;
+  tested_strategies: number;
+  results: BacktestRow[];
+}
+
+export interface Correlations {
+  window: number;
+  symbols: string[];
+  matrix: (number | null)[][];
+}
+
+export function getIndicatorSnapshot(symbol: string, limit = 252): Promise<IndicatorSnapshot> {
+  return apiGet<IndicatorSnapshot>(`/api/instruments/${symbol}/indicators?timeframe=1d&limit=${limit}`);
+}
+
+export function getBacktest(symbol?: string): Promise<BacktestReport> {
+  return apiGet<BacktestReport>(symbol ? `/api/backtest?symbol=${symbol}` : "/api/backtest");
+}
+
+export function getCorrelations(): Promise<Correlations> {
+  return apiGet<Correlations>("/api/correlations");
+}
