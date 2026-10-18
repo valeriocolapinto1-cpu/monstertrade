@@ -29,3 +29,10 @@ services:
         sync: false
       - key: T212_ENV
         value: live
+      # Ordini (passo C): disattivati finché non imposti demo o live.
+      - key: ORDERS_MODE
+        value: disabled
+      - key: T212_ORDER_API_KEY
+        sync: false
+      - key: T212_ORDER_API_SECRET
+        sync: false

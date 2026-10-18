@@ -1,6 +1,6 @@
 # MonsterTrade
 
-App personale di analisi tecnica e sentiment che propone trade su ETF a leva e crypto, con etichetta di rischio e rischio per trade limitato all'1% del capitale. **Strumento informativo, non consulenza.** Al momento è una simulazione: nessun ordine viene inviato al broker.
+App personale di analisi tecnica e sentiment che propone trade su ETF a leva e crypto, con etichetta di rischio e rischio per trade limitato all'1% del capitale. **Strumento informativo, non consulenza.** Gli ordini su Trading 212 sono disattivati di default; se abilitati, ognuno richiede la tua conferma.
 
 Piano: [`docs/PIANO.md`](docs/PIANO.md) · Regole di lavoro: [`CLAUDE.md`](CLAUDE.md) · Sicurezza: [`docs/sicurezza.md`](docs/sicurezza.md) · Decisioni: [`docs/decisioni.md`](docs/decisioni.md)
 
@@ -10,7 +10,7 @@ Piano: [`docs/PIANO.md`](docs/PIANO.md) · Regole di lavoro: [`CLAUDE.md`](CLAUD
 | 2. Indicatori e backtesting | completata | [`docs/indicatori-backtest.md`](docs/indicatori-backtest.md) |
 | 3. Sentiment e score | completata | [`docs/sentiment-score.md`](docs/sentiment-score.md) |
 | 4. Simulazione e rischio | completata, simulazione da avviare | [`docs/simulazione.md`](docs/simulazione.md) |
-| 5. Trading 212 | passo B (lettura del conto) completato; ordini non implementati | [`docs/trading212.md`](docs/trading212.md) |
+| 5. Trading 212 | lettura del conto e ordini con conferma (disattivati di default) | [`docs/trading212.md`](docs/trading212.md) |
 
 ## Struttura
 
@@ -49,6 +49,9 @@ npm ci
 | `API_SHARED_SECRET` | backend e frontend | sì in produzione | Stesso valore sui due lati; senza, l'API rifiuta tutto |
 | `APP_PASSWORD_HASH`, `SESSION_SECRET` | frontend | sì in produzione | Password dell'app (`node frontend/scripts/hash-password.mjs`) e firma delle sessioni |
 | `T212_API_KEY`, `T212_API_SECRET`, `T212_ENV` | backend, job trading | no | Trading 212 in sola lettura (`live` o `demo`) |
+| `ORDERS_MODE` | backend | no | `disabled` (default), `demo` o `live` |
+| `T212_ORDER_API_KEY`, `T212_ORDER_API_SECRET` | backend | no | Chiave separata con permesso di trading, dello stesso ambiente di `ORDERS_MODE` |
+| `MAX_ORDER_EUR`, `MAX_ORDERS_PER_DAY` | backend | no | Limiti rigidi: default 200 € e 3 ordini |
 
 Tutte le chiavi restano lato server: nei secrets di GitHub Actions e nelle variabili di Render/Vercel.
 
@@ -84,9 +87,9 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 
 ## Come fermare tutto in sicurezza
 
-L'app non invia ordini, quindi fermarla non lascia posizioni reali aperte. In ordine:
+Fermare l'app **non chiude** le posizioni reali già aperte: gli stop impostati restano attivi su Trading 212. In ordine:
 
-0. **Trading 212**: revoca la chiave API dall'app Trading 212 (Impostazioni → API): l'accesso al conto si interrompe subito, qualunque cosa succeda all'app.
+0. **Ordini**: pulsante *Blocco totale* su Portafoglio (immediato), poi `ORDERS_MODE=disabled` su Render. Per interrompere tutto in ogni caso revoca le chiavi API (ordini e lettura) dall'app Trading 212 (Impostazioni → API).
 
 1. **Job pianificati**: GitHub → Actions → "Aggiornamento dati" e "Sentiment" → menu `…` → *Disable workflow*. In alternativa togli il secret `DATABASE_URL`: i job si saltano da soli.
 2. **API**: Render → servizio `monstertrade-api` → *Suspend*.

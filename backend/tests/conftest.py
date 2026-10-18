@@ -33,8 +33,8 @@ def engine() -> Iterator[Engine]:
     with eng.begin() as conn:
         conn.execute(
             text(
-                "DROP TABLE IF EXISTS trades, trade_ideas, signals, sentiment, indicators, prices, "
-                "instruments, alembic_version CASCADE"
+                "DROP TABLE IF EXISTS orders, controls, broker_snapshots, trades, trade_ideas, "
+                "signals, sentiment, indicators, prices, instruments, alembic_version CASCADE"
             )
         )
     metadata.create_all(eng)

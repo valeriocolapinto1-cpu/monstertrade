@@ -36,6 +36,7 @@ def _idea(row: dict[str, object]) -> dict[str, object]:
         "symbol": row["symbol"],
         "name": spec.name if spec else row["symbol"],
         "leverage": spec.leverage if spec else 1,
+        "orderable": spec.orderable if spec else False,
         "horizon": row["horizon"],
         "created_at": _iso(row["created_at"]),
         "score": row["score"],
