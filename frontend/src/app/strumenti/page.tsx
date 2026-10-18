@@ -71,7 +71,12 @@ function PageTitle({ count }: { count: number }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
       <h1 className="text-xl font-semibold tracking-tight">Strumenti</h1>
-      <p className="num text-xs text-muted-foreground">{count} seguiti · chiusure giornaliere</p>
+      <p className="num flex items-baseline gap-3 text-xs text-muted-foreground">
+        <span>{count} seguiti · chiusure giornaliere</span>
+        <Link href="/strumenti/backtest" className="text-primary hover:underline">
+          Backtest
+        </Link>
+      </p>
     </div>
   );
 }

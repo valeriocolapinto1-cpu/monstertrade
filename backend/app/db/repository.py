@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app.data.models import OHLCV_COLUMNS, Timeframe, empty_ohlcv
 from app.data.universe import InstrumentSpec
-from app.db.schema import instruments, prices
+from app.db.schema import indicators, instruments, prices
 
 BATCH = 5000
 
@@ -121,3 +121,50 @@ def delete_before(
         )
     )
     return int(result.rowcount or 0)
+
+
+def replace_indicators(
+    conn: Connection, instrument_id: int, timeframe: Timeframe, wide: pd.DataFrame
+) -> int:
+    """Sostituisce gli indicatori salvati con la tabella larga (una colonna per nome)."""
+    conn.execute(
+        indicators.delete().where(
+            indicators.c.instrument_id == instrument_id,
+            indicators.c.timeframe == timeframe.value,
+        )
+    )
+    rows: list[dict[str, object]] = []
+    for name in wide.columns:
+        col = wide[name].dropna()
+        rows.extend(
+            {
+                "instrument_id": instrument_id,
+                "timeframe": timeframe.value,
+                "ts": ts.to_pydatetime(),
+                "name": str(name),
+                "value": float(v),
+            }
+            for ts, v in zip(col.index, col.to_numpy(dtype="float64"), strict=True)
+        )
+    if not rows:
+        return 0
+    for start in range(0, len(rows), BATCH):
+        conn.execute(indicators.insert(), rows[start : start + BATCH])
+    return len(rows)
+
+
+def load_indicators(
+    conn: Connection, instrument_id: int, timeframe: Timeframe, names: list[str] | None = None
+) -> pd.DataFrame:
+    conds = [indicators.c.instrument_id == instrument_id, indicators.c.timeframe == timeframe.value]
+    if names:
+        conds.append(indicators.c.name.in_(names))
+    rows = conn.execute(
+        select(indicators.c.ts, indicators.c.name, indicators.c.value).where(and_(*conds))
+    ).all()
+    if not rows:
+        return pd.DataFrame()
+    frame = pd.DataFrame(rows, columns=["ts", "name", "value"])
+    wide = frame.pivot(index="ts", columns="name", values="value").sort_index()
+    wide.index = pd.DatetimeIndex(wide.index).tz_convert("UTC")
+    return wide

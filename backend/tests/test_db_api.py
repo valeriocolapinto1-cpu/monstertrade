@@ -92,3 +92,27 @@ def test_update_quality_and_api(engine: Engine, client: TestClient) -> None:
     assert client.get("/api/instruments/NOPE/candles").status_code == 404
     assert client.get("/api/instruments/SPX/candles", params={"limit": 99999}).status_code == 422
     assert client.get("/api/instruments/sp;x/candles").status_code == 422
+
+
+def test_indicators_correlations_and_indicator_job(engine: Engine, client: TestClient) -> None:
+    from app.jobs import indicators as indicators_job
+
+    now = datetime(2026, 10, 17, 12, tzinfo=UTC)
+    run_update(engine, FakeRegistry(), now=now)
+    data = client.get("/api/instruments/NDX3L/indicators", params={"limit": 20}).json()
+    assert len(data["time"]) == 20
+    assert {"sma_20", "rsi_14", "macd", "atr_pct", "decay_annual"} <= set(data["series"])
+    assert all(len(v) == 20 for v in data["series"].values())
+    assert data["latest"]["decay_annual"] is not None
+    assert client.get("/api/instruments/NOPE/indicators").status_code == 404
+
+    corr = client.get("/api/correlations", params={"window": 30}).json()
+    assert corr["symbols"] and len(corr["matrix"]) == len(corr["symbols"])
+    assert client.get("/api/correlations", params={"window": 5}).status_code == 422
+
+    rows = indicators_job.run(engine)
+    assert rows > 0
+    with engine.connect() as conn:
+        ids = repo.instrument_ids(conn)
+        stored = repo.load_indicators(conn, ids["SPX"], Timeframe.D1, ["rsi_14"])
+    assert not stored.empty and list(stored.columns) == ["rsi_14"]

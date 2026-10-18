@@ -1,3 +1,5 @@
+import json
+import math
 import time
 from datetime import UTC, datetime
 from typing import Annotated
@@ -6,8 +8,19 @@ import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import Connection, and_, func, select
 
+from app.analysis import indicators as ind
+from app.analysis.compute import compute_all, summary_metrics
 from app.api.deps import get_conn
-from app.api.schemas import Candle, Candles, Instrument, Quality, QualityItem
+from app.api.schemas import (
+    Candle,
+    Candles,
+    Correlations,
+    Indicators,
+    Instrument,
+    LevelOut,
+    Quality,
+    QualityItem,
+)
 from app.data.models import Timeframe, resample_weekly
 from app.data.universe import BY_SYMBOL
 from app.db import repository as repo
@@ -109,6 +122,117 @@ def candles(
             for t, v in zip(epoch, values.tolist(), strict=True)
         ],
     )
+
+
+def _instrument_id(conn: Connection, symbol: str) -> int:
+    row = conn.execute(
+        select(instruments.c.id).where(instruments.c.symbol == symbol)
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Strumento non trovato")
+    return int(row)
+
+
+def _clean(values: pd.Series) -> list[float | None]:
+    return [None if v is None or not math.isfinite(v) else round(float(v), 6) for v in values]
+
+
+def _finite(value: float) -> float | None:
+    return value if value is not None and math.isfinite(value) else None
+
+
+WARMUP = 300
+
+
+@router.get("/instruments/{symbol}/indicators", response_model=Indicators)
+def instrument_indicators(
+    symbol: Symbol,
+    conn: Conn,
+    timeframe: Timeframe = Timeframe.D1,
+    limit: Annotated[int, Query(ge=10, le=5000)] = 500,
+) -> Indicators:
+    spec = BY_SYMBOL.get(symbol)
+    if spec is None:
+        raise HTTPException(status_code=404, detail="Strumento non trovato")
+    iid = _instrument_id(conn, symbol)
+
+    def load(instrument_id: int) -> pd.DataFrame:
+        if timeframe is Timeframe.W1:
+            daily = repo.load_prices(conn, instrument_id, Timeframe.D1)
+            return resample_weekly(daily).tail(limit + WARMUP)
+        return repo.load_prices(conn, instrument_id, timeframe, limit=limit + WARMUP)
+
+    prices = load(iid)
+    if prices.empty:
+        raise HTTPException(status_code=404, detail="Nessun prezzo per questo intervallo")
+    under = None
+    if spec.underlying:
+        under = load(_instrument_id(conn, spec.underlying))["close"]
+    wide = compute_all(prices, timeframe, spec.calendar, spec.leverage, under)
+    full_metrics = summary_metrics(prices.tail(limit), timeframe, spec.calendar)
+    wide = wide.tail(limit)
+    naive = pd.DatetimeIndex(wide.index).tz_convert(None).as_unit("s")
+    last = wide.iloc[-1]
+    return Indicators(
+        symbol=symbol,
+        timeframe=timeframe.value,
+        time=naive.to_numpy().astype("int64").tolist(),
+        series={str(c): _clean(wide[c]) for c in wide.columns},
+        levels=[
+            LevelOut(price=lv.price, touches=lv.touches, kind=lv.kind)
+            for lv in ind.support_resistance(prices)
+        ],
+        fibonacci=ind.fibonacci(prices),
+        metrics={k: _finite(v) for k, v in full_metrics.items()},
+        latest={str(k): _finite(float(v)) for k, v in last.items()},
+    )
+
+
+@router.get("/correlations", response_model=Correlations)
+def correlations(conn: Conn, window: Annotated[int, Query(ge=30, le=500)] = 90) -> Correlations:
+    closes: dict[str, pd.Series] = {}
+    ids = repo.instrument_ids(conn)
+    for spec in BY_SYMBOL.values():
+        if spec.symbol in ids:
+            frame = repo.load_prices(conn, ids[spec.symbol], Timeframe.D1, limit=window * 2)
+            if not frame.empty:
+                closes[spec.symbol] = frame["close"]
+    # Le crypto quotano anche nel fine settimana: si confrontano solo i giorni comuni.
+    table = pd.DataFrame(closes).dropna()
+    matrix = ind.correlation_matrix(table, window)
+    symbols = list(matrix.columns)
+    return Correlations(
+        window=window,
+        symbols=symbols,
+        matrix=[_clean(matrix[s].reindex(symbols)) for s in symbols],
+    )
+
+
+_backtest_cache: tuple[float, dict[str, object]] | None = None
+BACKTEST_TTL = 6 * 3600
+
+
+@router.get("/backtest")
+def backtest_report(
+    symbol: Annotated[str | None, Query(pattern=r"^[A-Z0-9]{2,16}$")] = None,
+) -> dict[str, object]:
+    """Rapporto del backtest: dal file del job se recente, altrimenti ricalcolato."""
+    from app.jobs.backtest import report_path, run_all, write_report
+
+    global _backtest_cache
+    now = time.monotonic()
+    if _backtest_cache is None or now - _backtest_cache[0] > BACKTEST_TTL:
+        path = report_path()
+        if path.exists() and time.time() - path.stat().st_mtime < BACKTEST_TTL:
+            report = json.loads(path.read_text())
+        else:
+            report = write_report(run_all(get_engine()), path)
+        _backtest_cache = (now, report)
+    report = dict(_backtest_cache[1])
+    if symbol is not None:
+        rows = report.get("results", [])
+        report["results"] = [r for r in rows if isinstance(r, dict) and r["symbol"] == symbol]
+    return report
 
 
 @router.get("/quality", response_model=Quality)

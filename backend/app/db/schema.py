@@ -65,3 +65,19 @@ prices = Table(
     CheckConstraint("timeframe IN ('5m', '15m', '1d')", name="timeframe_valid"),
     CheckConstraint("high >= low AND low > 0", name="ohlc_valid"),
 )
+
+indicators = Table(
+    "indicators",
+    metadata,
+    Column(
+        "instrument_id",
+        Integer,
+        ForeignKey("instruments.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("timeframe", String(4), primary_key=True),
+    Column("ts", DateTime(timezone=True), primary_key=True),
+    Column("name", String(32), primary_key=True),
+    Column("value", Float, nullable=False),
+    CheckConstraint("timeframe IN ('5m', '15m', '1d')", name="timeframe_valid"),
+)
