@@ -25,10 +25,11 @@ next-env.d.ts
 .vercel/
 
 # Dati locali e modelli
-data/
+/data/
 *.parquet
-models/
+/models/
 
 # Sistema
 .DS_Store
 *.log
+.cache/
