@@ -10,7 +10,7 @@ class SourceError(Exception):
     """Errore della fonte (rete, limiti, formato): si passa alla riserva."""
 
 
-class SourceUnavailable(SourceError):
+class SourceUnavailableError(SourceError):
     """Fonte non configurata (ad esempio chiave API mancante)."""
 
 

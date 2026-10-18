@@ -72,8 +72,7 @@ def expected_index(
         return pd.DatetimeIndex(sessions).tz_localize("UTC")
     schedule = cal.schedule.loc[sessions]
     bars: list[pd.DatetimeIndex] = [
-        pd.date_range(row.open, row.close - step, freq=step)
-        for row in schedule.itertuples()
+        pd.date_range(row.open, row.close - step, freq=step) for row in schedule.itertuples()
     ]
     index = bars[0].append(bars[1:]) if bars else pd.DatetimeIndex([], tz="UTC")
     index = pd.DatetimeIndex(index).tz_convert("UTC")

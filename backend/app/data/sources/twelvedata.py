@@ -5,7 +5,7 @@ import pandas as pd
 
 from app.data.models import Timeframe, empty_ohlcv, normalize_ohlcv
 from app.data.ratelimit import RateLimiter
-from app.data.sources.base import SourceError, SourceUnavailable
+from app.data.sources.base import SourceError, SourceUnavailableError
 
 BASE_URL = "https://api.twelvedata.com"
 INTERVALS = {Timeframe.M5: "5min", Timeframe.M15: "15min", Timeframe.D1: "1day"}
@@ -34,7 +34,7 @@ class TwelveDataSource:
         self, symbol: str, timeframe: Timeframe, start: datetime, end: datetime
     ) -> pd.DataFrame:
         if not self._api_key:
-            raise SourceUnavailable("TWELVE_DATA_API_KEY non impostata")
+            raise SourceUnavailableError("TWELVE_DATA_API_KEY non impostata")
         interval = INTERVALS.get(timeframe)
         if interval is None:
             raise ValueError(f"timeframe non scaricabile: {timeframe}")

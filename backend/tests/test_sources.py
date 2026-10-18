@@ -7,7 +7,7 @@ import pytest
 
 from app.data.models import Timeframe
 from app.data.ratelimit import RateLimiter
-from app.data.sources.base import SourceError, SourceUnavailable
+from app.data.sources.base import SourceError, SourceUnavailableError
 from app.data.sources.binance import BinanceSource, parse_klines
 from app.data.sources.registry import SourceRegistry
 from app.data.sources.twelvedata import TwelveDataSource, parse_time_series
@@ -64,7 +64,7 @@ def test_binance_http_error_becomes_source_error() -> None:
 def test_twelvedata_requires_key() -> None:
     source = TwelveDataSource(httpx.Client(), None)
     assert not source.available()
-    with pytest.raises(SourceUnavailable):
+    with pytest.raises(SourceUnavailableError):
         source.fetch("SPX", Timeframe.D1, datetime(2026, 1, 1, tzinfo=UTC), datetime.now(UTC))
 
 
