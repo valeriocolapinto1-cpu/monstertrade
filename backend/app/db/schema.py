@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -122,4 +123,73 @@ signals = Table(
     CheckConstraint(
         "risk_label IN ('Basso', 'Medio', 'Alto', 'Molto alto')", name="risk_label_valid"
     ),
+)
+
+trade_ideas = Table(
+    "trade_ideas",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column(
+        "instrument_id",
+        Integer,
+        ForeignKey("instruments.id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column("horizon", String(8), nullable=False),
+    Column("direction", String(8), nullable=False, server_default="long"),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("signal_ts", DateTime(timezone=True), nullable=False),
+    Column("score", Float, nullable=False),
+    Column("entry", Float, nullable=False),
+    Column("stop", Float, nullable=False),
+    Column("target", Float, nullable=False),
+    Column("size_eur", Float, nullable=False),
+    Column("risk_eur", Float, nullable=False),
+    Column("costs_eur", Float, nullable=False),
+    Column("risk_label", String(16), nullable=False),
+    Column("motivation", Text, nullable=False),
+    Column("warnings", JSONB, nullable=False, server_default="[]"),
+    Column("status", String(12), nullable=False, server_default="proposta"),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    UniqueConstraint("instrument_id", "horizon", "signal_ts", name="uq_trade_ideas_signal"),
+    CheckConstraint("direction IN ('long')", name="direction_valid"),
+    CheckConstraint("horizon IN ('day', 'swing', 'long')", name="horizon_valid"),
+    CheckConstraint(
+        "status IN ('proposta', 'aperta', 'chiusa', 'scaduta', 'annullata')", name="status_valid"
+    ),
+    CheckConstraint("stop < entry AND entry < target", name="levels_valid"),
+    CheckConstraint("size_eur > 0 AND risk_eur > 0 AND costs_eur >= 0", name="amounts_valid"),
+    CheckConstraint(
+        "risk_label IN ('Basso', 'Medio', 'Alto', 'Molto alto')", name="risk_label_valid"
+    ),
+)
+
+trades = Table(
+    "trades",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column(
+        "idea_id",
+        Integer,
+        ForeignKey("trade_ideas.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    ),
+    Column("mode", String(10), nullable=False, server_default="simulato"),
+    Column("entry_ts", DateTime(timezone=True), nullable=False),
+    Column("entry_price", Float, nullable=False),
+    Column("size_eur", Float, nullable=False),
+    Column("exit_ts", DateTime(timezone=True), nullable=True),
+    Column("exit_price", Float, nullable=True),
+    Column("exit_reason", String(12), nullable=True),
+    Column("pnl_eur", Float, nullable=True),
+    Column("fees_eur", Float, nullable=True),
+    Column("status", String(8), nullable=False, server_default="aperta"),
+    CheckConstraint("mode IN ('simulato', 'reale')", name="mode_valid"),
+    CheckConstraint("status IN ('aperta', 'chiusa')", name="status_valid"),
+    CheckConstraint(
+        "exit_reason IS NULL OR exit_reason IN ('stop', 'obiettivo', 'tempo', 'segnale')",
+        name="exit_reason_valid",
+    ),
+    CheckConstraint("entry_price > 0 AND size_eur > 0", name="amounts_valid"),
 )

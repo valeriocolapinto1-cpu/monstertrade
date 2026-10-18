@@ -179,3 +179,98 @@ export function getSignals(symbol?: string): Promise<Signal[]> {
 export function getSentiment(symbol: string, days = 14): Promise<SentimentData> {
   return apiGet<SentimentData>(`/api/instruments/${symbol}/sentiment?days=${days}`);
 }
+
+export interface Idea {
+  id: number;
+  symbol: string;
+  name: string;
+  leverage: number;
+  horizon: Horizon;
+  created_at: string;
+  score: number;
+  entry: number;
+  stop: number;
+  target: number;
+  size_eur: number;
+  risk_eur: number;
+  costs_eur: number;
+  risk_label: RiskLabel;
+  motivation: string;
+  warnings: string[];
+  status: "proposta" | "aperta" | "chiusa" | "scaduta" | "annullata";
+  expires_at: string;
+}
+
+export interface Today {
+  generated_at: string;
+  capital: number;
+  equity: number;
+  day_pnl: number;
+  daily_limit_reached: boolean;
+  open_positions: number;
+  limits: {
+    risk_per_trade: number;
+    max_daily_loss: number;
+    max_open_positions: number;
+    max_lev3_exposure: number;
+  };
+  proposals: Idea[];
+  skipped: { symbol: string; name: string; horizon: Horizon; score: number; reason: string }[];
+}
+
+export interface Position {
+  symbol: string;
+  name: string;
+  leverage: number;
+  horizon: Horizon;
+  entry_ts: string;
+  entry_price: number;
+  last_price: number;
+  stop: number;
+  target: number;
+  size_eur: number;
+  value: number;
+  pnl: number;
+  pnl_pct: number;
+}
+
+export interface Portfolio {
+  capital: number;
+  equity: number;
+  invested: number;
+  cash: number;
+  day_pnl: number;
+  day_pnl_limit: number;
+  lev3_exposure: number;
+  lev3_limit: number;
+  positions: Position[];
+  correlations: Record<string, Record<string, number>>;
+}
+
+export interface JournalItem extends Idea {
+  entry_ts: string | null;
+  entry_price: number | null;
+  exit_ts: string | null;
+  exit_price: number | null;
+  exit_reason: "stop" | "obiettivo" | "tempo" | "segnale" | null;
+  pnl_eur: number | null;
+  fees_eur: number | null;
+  mode: "simulato" | "reale" | null;
+}
+
+export interface Journal {
+  stats: {
+    trades: number;
+    win_rate: number | null;
+    avg_pnl: number | null;
+    avg_pnl_pct: number | null;
+    total_pnl: number;
+    max_drawdown: number | null;
+    fees: number;
+  };
+  items: JournalItem[];
+}
+
+export const getToday = () => apiGet<Today>("/api/today");
+export const getPortfolio = () => apiGet<Portfolio>("/api/portfolio");
+export const getJournal = () => apiGet<Journal>("/api/journal");

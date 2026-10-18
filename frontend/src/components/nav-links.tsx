@@ -8,10 +8,10 @@ import { Suspense } from "react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
-  { href: "/oggi", label: "Oggi", icon: Sun, ready: false },
+  { href: "/oggi", label: "Oggi", icon: Sun, ready: true },
   { href: "/strumenti", label: "Strumenti", icon: CandlestickChart, ready: true },
-  { href: "/portafoglio", label: "Portafoglio", icon: PieChart, ready: false },
-  { href: "/diario", label: "Diario", icon: BookOpen, ready: false },
+  { href: "/portafoglio", label: "Portafoglio", icon: PieChart, ready: true },
+  { href: "/diario", label: "Diario", icon: BookOpen, ready: true },
 ] as const;
 
 type Variant = { variant: "top" | "bottom" };

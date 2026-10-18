@@ -1,6 +1,6 @@
 // Service worker minimo: guscio dell'app in cache, dati sempre dalla rete.
-const CACHE = "mt-shell-v1";
-const SHELL = ["/strumenti", "/manifest.webmanifest", "/icons/icon-192.png"];
+const CACHE = "mt-shell-v2";
+const SHELL = ["/oggi", "/strumenti", "/manifest.webmanifest", "/icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
@@ -22,7 +22,7 @@ self.addEventListener("fetch", (event) => {
   // I prezzi non vanno mai serviti dalla cache: dati vecchi sarebbero fuorvianti.
   if (request.url.includes("/api/")) return;
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match("/strumenti")));
+    event.respondWith(fetch(request).catch(() => caches.match("/oggi")));
     return;
   }
   if (request.url.includes("/_next/static/") || request.url.includes("/icons/")) {

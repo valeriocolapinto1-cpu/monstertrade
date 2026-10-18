@@ -8,7 +8,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="mx-auto flex h-12 max-w-7xl items-center gap-6 px-4">
           <Link
-            href="/strumenti"
+            href="/oggi"
             className="flex items-center gap-2 text-base font-semibold tracking-tight"
           >
             <Logo />
