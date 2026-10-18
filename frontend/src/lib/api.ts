@@ -80,7 +80,7 @@ export interface BacktestRow {
   horizon: "day" | "swing" | "long";
   strategy: string;
   strategy_name: string;
-  family: "trend" | "momentum" | "riferimento";
+  family: "trend" | "momentum" | "riferimento" | "score";
   start: string;
   end: string;
   bars: number;
@@ -96,11 +96,26 @@ export interface BacktestRow {
   second_half: number | null;
 }
 
+export interface ScoreComparison {
+  horizon: "day" | "swing" | "long";
+  instruments: number;
+  score_sharpe: number;
+  simple_sharpe: number;
+  best_simple_sharpe: number;
+  beats_best: number;
+  beats_average: number;
+  score_return: number;
+  simple_return: number;
+  improves: boolean;
+}
+
 export interface BacktestReport {
   generated_at: string;
   criterion_met: boolean;
   positive_strategies: number;
   tested_strategies: number;
+  score_improves?: boolean;
+  score_comparison?: ScoreComparison[];
   results: BacktestRow[];
 }
 
@@ -120,4 +135,47 @@ export function getBacktest(symbol?: string): Promise<BacktestReport> {
 
 export function getCorrelations(): Promise<Correlations> {
   return apiGet<Correlations>("/api/correlations");
+}
+
+export type Horizon = "day" | "swing" | "long";
+export type RiskLabel = "Basso" | "Medio" | "Alto" | "Molto alto";
+
+export interface SignalEntry {
+  key: string;
+  component: string;
+  label: string;
+  value: number;
+}
+
+export interface Signal {
+  symbol: string;
+  horizon: Horizon;
+  ts: string;
+  score: number;
+  components: Record<string, number | null>;
+  favorable: SignalEntry[];
+  contrary: SignalEntry[];
+  risk_label: RiskLabel;
+  weights: Record<string, number>;
+}
+
+export interface SentimentItem {
+  date: string;
+  source: string;
+  score: number;
+  mentions: number;
+}
+
+export interface SentimentData {
+  symbol: string;
+  underlying: string;
+  items: SentimentItem[];
+}
+
+export function getSignals(symbol?: string): Promise<Signal[]> {
+  return apiGet<Signal[]>(symbol ? `/api/instruments/${symbol}/signals` : "/api/signals");
+}
+
+export function getSentiment(symbol: string, days = 14): Promise<SentimentData> {
+  return apiGet<SentimentData>(`/api/instruments/${symbol}/sentiment?days=${days}`);
 }

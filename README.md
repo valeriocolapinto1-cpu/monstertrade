@@ -21,6 +21,10 @@ cd backend && uv sync
 uv run alembic upgrade head                    # crea le tabelle
 uv run python -m app.jobs.prices update        # storico al primo avvio, poi incrementale
 uv run python -m app.jobs.prices quality       # rapporto di qualità (exit 1 se ci sono buchi)
+uv run python -m app.jobs.indicators           # indicatori per il motore dei segnali
+uv sync --extra ml && uv run python -m app.jobs.sentiment --history   # sentiment con FinBERT
+uv run python -m app.jobs.signals              # score, segnali ed etichette di rischio
+uv run python -m app.jobs.backtest             # backtest strategie semplici e score
 uv run uvicorn app.main:app --reload           # http://localhost:8000/health
 
 cd frontend && npm ci && npm run dev           # http://localhost:3000
@@ -30,9 +34,9 @@ cd frontend && npm ci && npm run dev           # http://localhost:3000
 
 - **API**: Render, dal blueprint `render.yaml` (imposta `DATABASE_URL` e `CORS_ORIGINS` nel pannello).
 - **Frontend**: Vercel con cartella `frontend` e variabile `API_URL` (URL dell'API, letto solo lato server).
-- **Job pianificati**: `.github/workflows/data.yml` ogni 30 minuti; si attiva quando nei secrets del repository c'è `DATABASE_URL`.
+- **Job pianificati**: `.github/workflows/data.yml` (prezzi, indicatori, score) ogni 30 minuti e `sentiment.yml` (FinBERT) ogni 2 ore; si attivano quando nei secrets del repository c'è `DATABASE_URL`.
 
-Dettagli su fonti, serie sintetiche e qualità: [`docs/dati.md`](docs/dati.md).
+Dettagli: [`docs/dati.md`](docs/dati.md) · [`docs/indicatori-backtest.md`](docs/indicatori-backtest.md) · [`docs/sentiment-score.md`](docs/sentiment-score.md)
 
 ## Controlli
 

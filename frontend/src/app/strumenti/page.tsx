@@ -3,14 +3,19 @@ import Link from "next/link";
 
 import { Badge } from "@/components/badge";
 import { Change } from "@/components/change";
-import { getInstruments, type Instrument } from "@/lib/api";
+import { RiskBadge } from "@/components/risk-badge";
+import { getInstruments, getSignals, type Instrument, type Signal } from "@/lib/api";
 import { formatDate, formatPrice } from "@/lib/format";
 import { KIND_LABEL, KIND_ORDER, leverageLabel } from "@/lib/instruments";
 
 export const metadata: Metadata = { title: "Strumenti" };
 
 export default async function StrumentiPage() {
-  const instruments = await getInstruments();
+  const [instruments, signals] = await Promise.all([
+    getInstruments(),
+    getSignals().catch(() => [] as Signal[]),
+  ]);
+  const swing = new Map(signals.filter((s) => s.horizon === "swing").map((s) => [s.symbol, s]));
   const groups = KIND_ORDER.map((kind) => ({
     kind,
     items: instruments.filter((i) => i.kind === kind),
@@ -49,6 +54,9 @@ export default async function StrumentiPage() {
                   <th scope="col" className="px-4 py-2 text-right font-medium">
                     Var. 1G
                   </th>
+                  <th scope="col" className="hidden px-4 py-2 text-right font-medium sm:table-cell">
+                    Score swing
+                  </th>
                   <th scope="col" className="hidden px-4 py-2 text-right font-medium lg:table-cell">
                     Chiusura
                   </th>
@@ -56,7 +64,7 @@ export default async function StrumentiPage() {
               </thead>
               <tbody className="divide-y">
                 {group.items.map((item) => (
-                  <Row key={item.symbol} item={item} />
+                  <Row key={item.symbol} item={item} signal={swing.get(item.symbol)} />
                 ))}
               </tbody>
             </table>
@@ -81,7 +89,7 @@ function PageTitle({ count }: { count: number }) {
   );
 }
 
-function Row({ item }: { item: Instrument }) {
+function Row({ item, signal }: { item: Instrument; signal?: Signal }) {
   const lev = leverageLabel(item.leverage);
   return (
     <tr className="group relative transition-colors hover:bg-surface-hover">
@@ -107,6 +115,21 @@ function Row({ item }: { item: Instrument }) {
       </td>
       <td className="px-4 py-2.5 text-right">
         <Change value={item.change_pct} />
+      </td>
+      <td className="hidden px-4 py-2.5 text-right sm:table-cell">
+        {signal ? (
+          <span className="inline-flex items-center gap-2">
+            <span
+              className={`num ${signal.score > 0 ? "text-up" : signal.score < 0 ? "text-down" : "text-muted-foreground"}`}
+            >
+              {signal.score > 0 ? "+" : ""}
+              {Math.round(signal.score)}
+            </span>
+            <RiskBadge label={signal.risk_label} className="w-[68px] justify-center" />
+          </span>
+        ) : (
+          <span className="text-subtle">—</span>
+        )}
       </td>
       <td className="num hidden px-4 py-2.5 text-right text-xs text-muted-foreground lg:table-cell">
         {item.last_ts ? formatDate(item.last_ts) : "—"}

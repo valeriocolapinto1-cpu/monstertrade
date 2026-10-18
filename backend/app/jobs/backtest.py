@@ -5,6 +5,7 @@ Uso:  python -m app.jobs.backtest   (scrive il rapporto JSON in CACHE_DIR/backte
 
 import json
 import logging
+from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -57,29 +58,42 @@ def report_path() -> Path:
     return get_settings().cache_dir / "backtest.json"
 
 
-def write_report(results: list[Result], path: Path) -> dict[str, object]:
+def write_report(
+    results: list[Result], path: Path, score_results: list[Result] | None = None
+) -> dict[str, object]:
+    from app.analysis.score_backtest import compare
+
     tradable = [r for r in results if r.family != "riferimento"]
     positive = [r for r in tradable if (r.total_return or 0) > 0]
+    comparisons = compare(score_results, results) if score_results else []
     report = {
         "generated_at": datetime.now(UTC).isoformat(),
         "criterion_met": bool(positive),
         "positive_strategies": len(positive),
         "tested_strategies": len(tradable),
-        "results": [r.to_dict() for r in results],
+        "score_improves": bool(comparisons) and all(c.improves for c in comparisons),
+        "score_comparison": [{**asdict(c), "improves": c.improves} for c in comparisons],
+        "results": [r.to_dict() for r in [*results, *(score_results or [])]],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2))
     return report
 
 
+def run_report(engine: Engine) -> dict[str, object]:
+    from app.analysis.score_backtest import run_scores
+
+    return write_report(run_all(engine), report_path(), run_scores(engine))
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
-    results = run_all(get_engine())
-    report = write_report(results, report_path())
+    report = run_report(get_engine())
     log.info(
-        "strategie positive dopo i costi: %s su %s",
+        "strategie positive dopo i costi: %s su %s; lo score migliora: %s",
         report["positive_strategies"],
         report["tested_strategies"],
+        report["score_improves"],
     )
     return 0 if report["criterion_met"] else 1
 
