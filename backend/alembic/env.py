@@ -1,7 +1,7 @@
 from logging.config import fileConfig
 
 from alembic import context
-from app.db.engine import get_engine
+from app.db.engine import get_migration_engine
 from app.db.schema import metadata
 
 config = context.config
@@ -12,7 +12,7 @@ target_metadata = metadata
 
 
 def run_migrations_online() -> None:
-    connectable = config.attributes.get("connection") or get_engine()
+    connectable = config.attributes.get("connection") or get_migration_engine()
     if hasattr(connectable, "connect"):
         with connectable.connect() as connection:
             context.configure(connection=connection, target_metadata=target_metadata)

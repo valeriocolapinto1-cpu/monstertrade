@@ -8,10 +8,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Configurazione letta solo da variabili d'ambiente (mai dal repository)."""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # `neon env pull` scrive DATABASE_URL e DATABASE_URL_UNPOOLED in .env.local nella radice;
+    # backend/.env ha la precedenza, le variabili d'ambiente vincono su entrambi.
+    model_config = SettingsConfigDict(
+        env_file=("../.env.local", ".env"), env_file_encoding="utf-8", extra="ignore"
+    )
 
     environment: str = Field(default="development", pattern="^(development|test|production)$")
+    # Neon: URL con pooler (-pooler) per l'app, URL diretto per le migrazioni Alembic.
     database_url: SecretStr | None = None
+    database_url_unpooled: SecretStr | None = None
     twelve_data_api_key: SecretStr | None = None
     finnhub_api_key: SecretStr | None = None
     reddit_client_id: SecretStr | None = None
