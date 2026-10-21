@@ -1,8 +1,10 @@
+import json
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -16,7 +18,8 @@ class Settings(BaseSettings):
     finnhub_api_key: SecretStr | None = None
     reddit_client_id: SecretStr | None = None
     reddit_client_secret: SecretStr | None = None
-    cors_origins: list[str] = ["http://localhost:3000"]
+    # Accetta JSON (["https://a.app"]) oppure un elenco separato da virgole.
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
     cache_dir: Path = Path(".cache")
     # Tasso annuo usato per il costo di finanziamento degli ETF a leva sintetici.
     funding_rate: float = Field(default=0.04, ge=0, le=0.2)
@@ -44,6 +47,20 @@ class Settings(BaseSettings):
     # Limiti rigidi per ordine e per giorno, oltre a quelli di rischio.
     max_order_eur: float = Field(default=200.0, ge=10, le=2000)
     max_orders_per_day: int = Field(default=3, ge=1, le=10)
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            text = value.strip()
+            items = json.loads(text) if text.startswith("[") else text.split(",")
+            if not isinstance(items, list):
+                raise ValueError("CORS_ORIGINS non valido")
+            value = items
+        if isinstance(value, list):
+            # Un'origine non ha mai lo slash finale: lo si toglie per evitare errori di copia.
+            return [str(v).strip().rstrip("/") for v in value if str(v).strip()]
+        return value
 
 
 @lru_cache
