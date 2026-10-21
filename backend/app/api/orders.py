@@ -13,6 +13,7 @@ from sqlalchemy import Connection
 from app.api.deps import get_conn
 from app.config import get_settings
 from app.trading import orders as svc
+from app.trading.engine import reset_proposals
 
 router = APIRouter(prefix="/api")
 Conn = Annotated[Connection, Depends(get_conn)]
@@ -77,3 +78,11 @@ def kill_switch(body: KillSwitchBody, conn: Conn) -> dict[str, object]:
     svc.set_kill_switch(conn, body.active)
     conn.commit()
     return {"kill_switch": svc.kill_switch_active(conn)}
+
+
+@router.post("/ideas/reset")
+def reset_ideas(conn: Conn) -> dict[str, object]:
+    """Azzera le proposte attive: le nuove arrivano al prossimo aggiornamento dei dati."""
+    count = reset_proposals(conn)
+    conn.commit()
+    return {"annullate": count}

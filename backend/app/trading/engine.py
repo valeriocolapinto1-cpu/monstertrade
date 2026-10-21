@@ -249,7 +249,9 @@ def evaluate(
     # Le proposte non ancora aperte contano già nei limiti (la simulazione le aprirà).
     state.open_positions.extend(OpenPosition(str(s), float(lv), float(sz)) for s, lv, sz in pending)
     rows = [r for r in repo.latest_signals(conn) if r["symbol"] in BY_SYMBOL]
-    rows.sort(key=lambda r: -float(str(r["score"])))
+    # Prima gli strumenti ordinabili su Trading 212, poi gli altri (solo informativi):
+    # a parità di gruppo vince lo score più alto.
+    rows.sort(key=lambda r: (not BY_SYMBOL[str(r["symbol"])].orderable, -float(str(r["score"]))))
     out: list[Candidate] = []
     for r in rows:
         score = float(str(r["score"]))
@@ -416,3 +418,11 @@ def simulate(conn: Connection, now: datetime) -> dict[str, int]:
         )
         counts["chiusi"] += 1
     return counts
+
+
+def reset_proposals(conn: Connection) -> int:
+    """Annulla tutte le proposte non ancora aperte; le posizioni simulate restano."""
+    result = conn.execute(
+        update(trade_ideas).where(trade_ideas.c.status == "proposta").values(status="annullata")
+    )
+    return int(result.rowcount or 0)
