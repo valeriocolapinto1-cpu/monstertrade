@@ -42,3 +42,20 @@ def test_no_write_methods_exposed(make_client) -> None:  # type: ignore[no-untyp
     for path in ("/api/today", "/api/broker/portfolio", "/api/journal"):
         assert client.post(path).status_code == 405
         assert client.delete(path).status_code == 405
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('["https://a.vercel.app"]', ["https://a.vercel.app"]),
+        ("https://a.vercel.app/", ["https://a.vercel.app"]),
+        ("https://a.vercel.app, https://b.example", ["https://a.vercel.app", "https://b.example"]),
+    ],
+)
+def test_cors_origins_formats(
+    monkeypatch: pytest.MonkeyPatch, raw: str, expected: list[str]
+) -> None:
+    from app.config import Settings
+
+    monkeypatch.setenv("CORS_ORIGINS", raw)
+    assert Settings(_env_file=None).cors_origins == expected  # type: ignore[call-arg]

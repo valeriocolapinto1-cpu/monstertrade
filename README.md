@@ -39,7 +39,7 @@ npm ci
 | Variabile | Dove | Obbligatoria | Note |
 | --- | --- | --- | --- |
 | `DATABASE_URL` | backend, job | sì | URL Postgres |
-| `CORS_ORIGINS` | backend | no | Origini ammesse, in JSON |
+| `CORS_ORIGINS` | backend | no | URL del sito (es. `https://nome.vercel.app`); più origini separate da virgola o in JSON |
 | `CAPITAL_EUR` | backend, job | no | 500-2.000, default 1.000 |
 | `RISK_PER_TRADE`, `MAX_DAILY_LOSS`, `MAX_OPEN_POSITIONS`, `MAX_LEV3_EXPOSURE` | backend, job | no | Si possono solo stringere rispetto al piano |
 | `TWELVE_DATA_API_KEY` | job | no | Senza chiave si usa `yfinance` |
