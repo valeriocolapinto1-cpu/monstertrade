@@ -24,8 +24,9 @@ def authorized(provided: str | None) -> tuple[bool, int]:
         if settings.environment == "production":
             return False, status.HTTP_503_SERVICE_UNAVAILABLE
         return True, status.HTTP_200_OK
+    # Spazi e a capo di troppo arrivano facilmente copiando i valori dal telefono.
     ok = provided is not None and hmac.compare_digest(
-        provided.encode(), secret.get_secret_value().encode()
+        provided.strip().encode(), secret.get_secret_value().strip().encode()
     )
     return ok, status.HTTP_200_OK if ok else status.HTTP_401_UNAUTHORIZED
 

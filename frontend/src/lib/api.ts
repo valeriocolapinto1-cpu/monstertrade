@@ -63,25 +63,36 @@ export class ApiError extends Error {
 
 /** URL del backend: solo lato server, mai esposto al browser. */
 export function apiBase(): string {
-  return process.env.API_URL ?? "http://localhost:8000";
+  // Tollera errori di copia: spazi, slash finale o "/api" in fondo all'indirizzo.
+  const raw = (process.env.API_URL ?? "http://localhost:8000").trim();
+  return raw.replace(/\/+$/, "").replace(/\/api$/, "");
 }
 
 export const SYMBOL_PATTERN = /^[A-Z0-9]{2,16}$/;
 
 /** Intestazioni per il backend: il segreto condiviso resta solo lato server. */
 export function apiHeaders(): Record<string, string> {
-  const secret = process.env.API_SHARED_SECRET;
+  const secret = process.env.API_SHARED_SECRET?.trim();
   return secret ? { "X-API-Key": secret } : {};
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
   await requireSession();
-  const response = await fetch(`${apiBase()}${path}`, {
-    cache: "no-store",
-    headers: apiHeaders(),
-    signal: AbortSignal.timeout(15_000),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiBase()}${path}`, {
+      cache: "no-store",
+      headers: apiHeaders(),
+      // Render gratuito si spegne quando non usato: il risveglio richiede fino a ~50 s.
+      signal: AbortSignal.timeout(55_000),
+    });
+  } catch (e) {
+    console.error(`API ${path.split("?")[0]} non raggiungibile: ${(e as Error).name}`);
+    throw new ApiError("Servizio non raggiungibile", 503);
+  }
   if (!response.ok) {
+    // Solo percorso e codice nei log del server (Vercel), mai intestazioni o segreti.
+    console.error(`API ${path.split("?")[0]} -> ${response.status}`);
     throw new ApiError(`Richiesta non riuscita (${response.status})`, response.status);
   }
   return (await response.json()) as T;
