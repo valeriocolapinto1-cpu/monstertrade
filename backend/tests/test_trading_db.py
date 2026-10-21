@@ -217,3 +217,26 @@ def test_real_account_drives_risk(
     today = client.get("/api/today").json()
     assert today["risk_source"] == "conto"
     assert any("3 posizioni" in s["reason"] for s in today["skipped"])
+
+
+def test_orderable_first_and_reset(
+    engine: Engine, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.trading import engine as trading_engine
+
+    monkeypatch.setattr(trading_engine, "correlations", lambda conn, s, others: {})
+    run_update(engine, FakeRegistry(), now=NOW)
+    # Indici e crypto con score più alto, ETF a leva più bassi: passano prima gli ordinabili.
+    for symbol, score in (("SPX", 90.0), ("BTC", 85.0), ("NDX2L", 40.0), ("SPX3L", 35.0)):
+        strong_signal(engine, symbol, "swing", score)
+    trading_job.run(engine, now=NOW, send=False)
+    proposals = client.get("/api/today").json()["proposals"]
+    orderable = [p["symbol"] for p in proposals if p["orderable"]]
+    assert {"NDX2L", "SPX3L"} <= set(orderable)
+
+    reset = client.post("/api/ideas/reset")
+    assert reset.status_code == 200 and reset.json()["annullate"] == len(proposals)
+    assert client.get("/api/today").json()["proposals"] == []
+    with engine.connect() as conn:
+        statuses = conn.execute(select(trade_ideas.c.status)).scalars().all()
+    assert set(statuses) == {"annullata"}

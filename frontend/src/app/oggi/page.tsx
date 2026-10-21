@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { IdeaRow } from "@/components/idea-row";
 import { Kpi, KpiStrip } from "@/components/kpi";
+import { ResetProposals } from "@/components/reset-proposals";
 import { getOrders, getToday } from "@/lib/api";
 import { formatEur, formatNumber } from "@/lib/format";
 import { HORIZON_SHORT } from "@/lib/labels";
@@ -11,6 +12,8 @@ export const metadata: Metadata = { title: "Oggi" };
 
 export default async function OggiPage() {
   const [t, orders] = await Promise.all([getToday(), getOrders().catch(() => null)]);
+  const orderable = t.proposals.filter((p) => p.orderable);
+  const informative = t.proposals.filter((p) => !p.orderable);
   const orderMode =
     orders && orders.configured && !orders.kill_switch && orders.mode !== "disabled" ? orders.mode : undefined;
   const limit = t.limits.max_daily_loss * t.capital;
@@ -62,26 +65,41 @@ export default async function OggiPage() {
       )}
 
       <section aria-labelledby="proposte" className="rounded-md border bg-card">
-        <h2 id="proposte" className="flex items-baseline justify-between border-b px-4 py-2 text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-          Trade proposti
-          <span className="num normal-case tracking-normal text-subtle">ordinati per score</span>
+        <h2 id="proposte" className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2 text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+          Ordinabili su Trading 212
+          <ResetProposals count={t.proposals.length} />
         </h2>
-        {t.proposals.length === 0 ? (
+        {orderable.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="font-medium">Nessuna proposta in questo momento</p>
+            <p className="font-medium">Nessuna proposta ordinabile in questo momento</p>
             <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
-              Si propone un trade solo se lo score supera la soglia, il rischio resta nei limiti e conviene
-              dopo i costi. Non operare è spesso la scelta migliore.
+              Qui compaiono solo gli ETF a leva acquistabili tramite l&apos;API di Trading 212, e solo se lo score
+              supera la soglia, il rischio resta nei limiti e il trade conviene dopo i costi. Non operare è spesso
+              la scelta migliore.
             </p>
           </div>
         ) : (
           <div className="divide-y">
-            {t.proposals.map((idea) => (
+            {orderable.map((idea) => (
               <IdeaRow key={idea.id} idea={idea} orderMode={orderMode} />
             ))}
           </div>
         )}
       </section>
+
+      {informative.length > 0 && (
+        <section aria-labelledby="informative" className="rounded-md border bg-card">
+          <h2 id="informative" className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-2 text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+            Altre proposte · solo informative
+            <span className="normal-case tracking-normal text-subtle">indici e crypto, non ordinabili via API</span>
+          </h2>
+          <div className="divide-y">
+            {informative.map((idea) => (
+              <IdeaRow key={idea.id} idea={idea} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {t.skipped.length > 0 && (
         <section aria-labelledby="scartati" className="rounded-md border bg-card">
