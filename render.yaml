@@ -7,8 +7,10 @@ services:
     plan: free
     region: frankfurt
     rootDir: backend
-    buildCommand: pip install uv==0.11.32 && uv sync --frozen --no-dev
-    startCommand: uv run --no-dev alembic upgrade head && uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # Bytecode compilato in build e avvio diretto dal virtualenv: niente ricompilazione
+    # né risincronizzazione a ogni risveglio del piano gratuito.
+    buildCommand: pip install uv==0.11.32 && uv sync --frozen --no-dev --compile-bytecode
+    startCommand: .venv/bin/alembic upgrade head && .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: ENVIRONMENT
