@@ -116,3 +116,18 @@ def test_duplicate_instrument_rejected() -> None:
 def test_minimum_stop_distance() -> None:
     plan = plan_trade(req(atr_pct=0.05, round_trip_cost=0.0), state(), CFG)
     assert isinstance(plan, TradePlan) and plan.stop_pct == pytest.approx(0.005)
+
+
+def test_small_capital_50_eur() -> None:
+    from app.config import Settings
+
+    assert Settings(_env_file=None, capital_eur=50).capital_eur == 50  # type: ignore[call-arg]
+    with pytest.raises(ValueError):
+        Settings(_env_file=None, capital_eur=49)  # type: ignore[call-arg]
+    cfg = RiskConfig(capital=50, min_order=1.0)
+    state = PortfolioState(equity=50, day_start_equity=50)
+    req = TradeRequest("NDX2L", "swing", 2, 100.0, 2.0, 0.004)
+    plan = plan_trade(req, state, cfg)
+    assert isinstance(plan, TradePlan)
+    assert plan.risk_eur <= 0.5 + 1e-6  # 1% di 50 euro, costi inclusi
+    assert 1.0 <= plan.size_eur <= 50

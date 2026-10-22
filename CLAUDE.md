@@ -19,7 +19,7 @@ Sei un esperto del settore finanziario (mercati, ETF a leva, crypto, gestione de
 - Dati: Twelve Data e Binance (prezzi), Finnhub, Reddit, Alternative.me (sentiment). Niente X/Twitter. Ogni fonte dietro un'interfaccia sostituibile, con cache e rispetto dei limiti di richieste.
 
 ## Regole del dominio finanziario
-- Uso personale. Capitale 500-2.000 euro. Rischio massimo per trade 1% del capitale.
+- Uso personale. Capitale 50-2.000 euro (minimo abbassato da 500 su decisione dell'utente, ottobre 2026). Rischio massimo per trade 1% del capitale.
 - Dimensione posizione = capitale x 1% / distanza dello stop in percentuale. Ogni proposta ha stop obbligatorio (basato su ATR), obiettivo ed etichetta di rischio (Basso, Medio, Alto, Molto alto).
 - Limiti fissi: perdita massima giornaliera 3%, massimo 3 posizioni aperte, massimo 30% del capitale in leva 3x, niente trade su strumenti molto correlati a posizioni già aperte.
 - ETF a leva: tenere conto del decadimento da volatilità; avviso se la posizione è tenuta a lungo in mercato laterale. Analizzare l'indice sottostante e applicare il fattore di leva.

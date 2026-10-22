@@ -9,7 +9,7 @@ L'app propone trade con etichetta di rischio; la decisione finale resta all'uten
 | Voce | Scelta |
 | --- | --- |
 | Uso | Personale, nessuna consulenza ad altri |
-| Capitale | 500 – 2.000 € |
+| Capitale | 50 – 2.000 € (minimo abbassato da 500, vedi `docs/decisioni.md`) |
 | Rischio per trade | Circa 1% del capitale (5 – 20 € a trade) |
 | Strumenti | ETF a leva su indici USA e settori (tech, semiconduttori), ETF short/inversi, crypto e ETP crypto |
 | Orizzonti | Day trading, swing (giorni/settimane), lungo periodo |

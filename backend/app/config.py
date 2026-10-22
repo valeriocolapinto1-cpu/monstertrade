@@ -23,14 +23,15 @@ class Settings(BaseSettings):
     cache_dir: Path = Path(".cache")
     # Tasso annuo usato per il costo di finanziamento degli ETF a leva sintetici.
     funding_rate: float = Field(default=0.04, ge=0, le=0.2)
-    # Gestione del rischio (uso personale, capitale 500-2.000 euro).
-    capital_eur: float = Field(default=1000.0, ge=500, le=2000)
+    # Gestione del rischio (uso personale, capitale 50-2.000 euro: decisione dell'utente).
+    capital_eur: float = Field(default=1000.0, ge=50, le=2000)
     risk_per_trade: float = Field(default=0.01, gt=0, le=0.01)
     max_daily_loss: float = Field(default=0.03, gt=0, le=0.03)
     max_open_positions: int = Field(default=3, ge=1, le=3)
     max_lev3_exposure: float = Field(default=0.30, gt=0, le=0.30)
     max_correlation: float = Field(default=0.80, gt=0, le=1)
-    min_order_eur: float = Field(default=10.0, ge=1)
+    # Trading 212 accetta frazioni di ETF da 1 euro: serve con capitali piccoli.
+    min_order_eur: float = Field(default=1.0, ge=1)
     # Notifiche delle nuove proposte (facoltative) con ntfy.sh: argomento privato.
     ntfy_topic: SecretStr | None = None
     # Segreto condiviso con il frontend: senza, in produzione l'API rifiuta ogni richiesta.
@@ -45,7 +46,7 @@ class Settings(BaseSettings):
     t212_order_api_key: SecretStr | None = None
     t212_order_api_secret: SecretStr | None = None
     # Limiti rigidi per ordine e per giorno, oltre a quelli di rischio.
-    max_order_eur: float = Field(default=200.0, ge=10, le=2000)
+    max_order_eur: float = Field(default=200.0, ge=1, le=2000)
     max_orders_per_day: int = Field(default=3, ge=1, le=10)
 
     @field_validator("cors_origins", mode="before")

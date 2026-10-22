@@ -16,3 +16,7 @@
 | Leva short | S&P 500 -3x, Nasdaq 100 -3x | Indice sottostante × fattore |
 | Crypto | BTC, ETH, SOL | Binance (coppie USDT) |
 | ETP crypto | ETP fisici BTC ed ETH | Sottostante crypto |
+
+## Capitale minimo 50 € (22 ottobre 2026)
+
+L'utente opera con un capitale reale di 50 €. Il minimo di `CAPITAL_EUR` passa da 500 a 50 € e il minimo per posizione (`MIN_ORDER_EUR`) da 10 a 1 €, sfruttando le frazioni di Trading 212. Tutte le altre regole restano invariate: rischio 1% per trade (0,50 € con 50 €), perdita giornaliera massima 3%, massimo 3 posizioni, massimo 30% in leva 3x (15 €). Con posizioni di pochi euro ogni proposta deve comunque risultare conveniente dopo spread e cambio.

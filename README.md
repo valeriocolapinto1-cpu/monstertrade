@@ -40,7 +40,8 @@ npm ci
 | --- | --- | --- | --- |
 | `DATABASE_URL` | backend, job | sì | URL Postgres |
 | `CORS_ORIGINS` | backend | no | URL del sito (es. `https://nome.vercel.app`); più origini separate da virgola o in JSON |
-| `CAPITAL_EUR` | backend, job | no | 500-2.000, default 1.000 |
+| `CAPITAL_EUR` | backend, job | no | 50-2.000, default 1.000 |
+| `MIN_ORDER_EUR` | backend, job | no | Importo minimo di una posizione, default 1 € (frazioni Trading 212) |
 | `RISK_PER_TRADE`, `MAX_DAILY_LOSS`, `MAX_OPEN_POSITIONS`, `MAX_LEV3_EXPOSURE` | backend, job | no | Si possono solo stringere rispetto al piano |
 | `TWELVE_DATA_API_KEY` | job | no | Senza chiave si usa `yfinance` |
 | `FINNHUB_API_KEY`, `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` | job sentiment | no | Fonti aggiuntive di sentiment |
