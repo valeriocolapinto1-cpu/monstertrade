@@ -47,6 +47,7 @@ npm ci
 | `NTFY_TOPIC` | job trading | no | Notifiche delle nuove proposte |
 | `API_URL` | frontend (server) | sì in produzione | URL dell'API, mai esposto al browser |
 | `API_SHARED_SECRET` | backend e frontend | sì in produzione | Stesso valore sui due lati; senza, l'API rifiuta tutto |
+| `GITHUB_DISPATCH_TOKEN` | frontend | no | Token GitHub (fine-grained, solo questo repository, permesso Actions: lettura e scrittura) per il pulsante "Aggiorna proposte" |
 | `APP_PASSWORD_HASH`, `SESSION_SECRET` | frontend | sì in produzione | Password dell'app (`node frontend/scripts/hash-password.mjs`) e firma delle sessioni |
 | `T212_API_KEY`, `T212_API_SECRET`, `T212_ENV` | backend, job trading | no | Trading 212 in sola lettura (`live` o `demo`) |
 | `ORDERS_MODE` | backend | no | `disabled` (default), `demo` o `live` |

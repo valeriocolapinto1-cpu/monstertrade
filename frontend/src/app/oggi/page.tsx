@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { IdeaRow } from "@/components/idea-row";
 import { Kpi, KpiStrip } from "@/components/kpi";
+import { RefreshButton } from "@/components/refresh-button";
 import { ResetProposals } from "@/components/reset-proposals";
 import { getOrders, getToday } from "@/lib/api";
 import { formatEur, formatNumber } from "@/lib/format";
@@ -31,6 +32,7 @@ export default async function OggiPage() {
               : "ordini disattivati: solo suggerimenti"}
         </p>
       </div>
+      <RefreshButton />
       <KpiStrip>
         <Kpi
           label={t.risk_source === "conto" ? "Conto a inizio giornata" : "Capitale simulato"}
