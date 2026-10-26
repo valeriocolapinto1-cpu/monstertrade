@@ -13,7 +13,7 @@ from sqlalchemy import Connection
 from app.api.deps import get_conn
 from app.config import get_settings
 from app.trading import orders as svc
-from app.trading.engine import reset_proposals
+from app.trading.engine import reset_proposals, reset_simulation
 
 router = APIRouter(prefix="/api")
 Conn = Annotated[Connection, Depends(get_conn)]
@@ -86,3 +86,11 @@ def reset_ideas(conn: Conn) -> dict[str, object]:
     count = reset_proposals(conn)
     conn.commit()
     return {"annullate": count}
+
+
+@router.post("/simulation/reset")
+def reset_sim(conn: Conn) -> dict[str, object]:
+    """Azzera la simulazione (trade simulati e proposte); gli ordini reali restano."""
+    result = reset_simulation(conn)
+    conn.commit()
+    return dict(result)

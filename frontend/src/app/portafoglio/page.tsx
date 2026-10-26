@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/badge";
 import { Kpi, KpiStrip } from "@/components/kpi";
 import { OrdersPanel } from "@/components/orders-panel";
+import { ResetSimulation } from "@/components/reset-simulation";
 import { type BrokerPortfolio, getBrokerPortfolio, getOrders, getPortfolio } from "@/lib/api";
 import { formatEur, formatNumber, formatPercent, formatPrice } from "@/lib/format";
 import { leverageLabel } from "@/lib/instruments";
@@ -29,7 +30,10 @@ export default async function PortafoglioPage() {
       <RealAccount data={broker} />
       <OrdersPanel data={orders} />
 
-      <h2 className="pt-2 text-2xs font-medium uppercase tracking-wider text-muted-foreground">Simulazione</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+        <h2 className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">Simulazione</h2>
+        <ResetSimulation />
+      </div>
       <KpiStrip>
         <Kpi
           label="Capitale"
