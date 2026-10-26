@@ -1,6 +1,6 @@
 /** Validazione delle richieste di ordine dal browser (pura, testabile). */
 
-export type OrderAction = "anteprima" | "invia" | "blocco" | "azzera";
+export type OrderAction = "anteprima" | "invia" | "blocco" | "azzera" | "azzera-simulazione";
 
 export const TOKEN_PATTERN = /^\d+\.[0-9a-f]{64}$/;
 
@@ -19,7 +19,7 @@ function positiveInt(value: unknown): value is number {
 export function validateOrderBody(action: OrderAction, body: unknown): Record<string, unknown> | null {
   if (typeof body !== "object" || body === null) return null;
   const b = body as Record<string, unknown>;
-  if (action === "azzera") return {};
+  if (action === "azzera" || action === "azzera-simulazione") return {};
   if (action === "blocco") {
     return typeof b.active === "boolean" ? { active: b.active } : null;
   }
@@ -40,4 +40,5 @@ export const BACKEND_PATH: Record<OrderAction, string> = {
   invia: "/api/orders",
   blocco: "/api/controls/kill-switch",
   azzera: "/api/ideas/reset",
+  "azzera-simulazione": "/api/simulation/reset",
 };

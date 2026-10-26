@@ -40,5 +40,7 @@ describe("validateOrderBody", () => {
     expect(validateOrderBody("blocco", { active: false })).toEqual({ active: false });
     expect(validateOrderBody("anteprima", null)).toBeNull();
     expect(validateOrderBody("azzera", { qualsiasi: 1 })).toEqual({});
+    expect(validateOrderBody("azzera-simulazione", null)).toBeNull();
+    expect(validateOrderBody("azzera-simulazione", {})).toEqual({});
   });
 });

@@ -240,3 +240,47 @@ def test_orderable_first_and_reset(
     with engine.connect() as conn:
         statuses = conn.execute(select(trade_ideas.c.status)).scalars().all()
     assert set(statuses) == {"annullata"}
+
+
+def test_reset_simulation_frees_capital(
+    engine: Engine, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.trading import engine as trading_engine
+
+    monkeypatch.setattr(trading_engine, "correlations", lambda conn, s, others: {})
+    run_update(engine, FakeRegistry(), now=NOW)
+    with engine.begin() as conn:
+        ids = repo.instrument_ids(conn)
+        idea = conn.execute(
+            trade_ideas.insert()
+            .values(
+                instrument_id=ids["BTC"],
+                horizon="swing",
+                signal_ts=NOW,
+                score=50,
+                entry=100,
+                stop=95,
+                target=110,
+                size_eur=900,
+                risk_eur=10,
+                costs_eur=1,
+                risk_label="Medio",
+                motivation="vecchio capitale",
+                status="aperta",
+                expires_at=NOW,
+            )
+            .returning(trade_ideas.c.id)
+        ).scalar_one()
+        conn.execute(
+            trades.insert().values(idea_id=idea, entry_ts=NOW, entry_price=100, size_eur=900)
+        )
+    response = client.post("/api/simulation/reset")
+    assert response.status_code == 200
+    assert response.json()["trade_cancellati"] == 1
+    with engine.connect() as conn:
+        assert conn.execute(select(trades)).first() is None
+        status = conn.execute(
+            select(trade_ideas.c.status).where(trade_ideas.c.id == idea)
+        ).scalar_one()
+    assert status == "annullata"
+    assert client.get("/api/portfolio").json()["positions"] == []

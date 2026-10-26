@@ -426,3 +426,19 @@ def reset_proposals(conn: Connection) -> int:
         update(trade_ideas).where(trade_ideas.c.status == "proposta").values(status="annullata")
     )
     return int(result.rowcount or 0)
+
+
+def reset_simulation(conn: Connection) -> dict[str, int]:
+    """Riparte da zero con la simulazione: cancella i trade simulati e annulla le idee collegate.
+
+    Serve quando cambia il capitale: posizioni dimensionate sul capitale precedente
+    bloccherebbero ogni nuova proposta. Gli ordini reali e il loro registro restano.
+    """
+    sim_ideas = select(trades.c.idea_id).where(trades.c.mode == "simulato")
+    ideas = conn.execute(
+        update(trade_ideas)
+        .where((trade_ideas.c.status == "proposta") | trade_ideas.c.id.in_(sim_ideas))
+        .values(status="annullata")
+    ).rowcount
+    removed = conn.execute(trades.delete().where(trades.c.mode == "simulato")).rowcount
+    return {"trade_cancellati": int(removed or 0), "idee_annullate": int(ideas or 0)}
