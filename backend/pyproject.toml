@@ -23,7 +23,7 @@ dependencies = [
 # FinBERT gira solo nei job pianificati (GitHub Actions), non nell'API su Render.
 ml = [
     "torch==2.14.1",
-    "transformers==5.20.1",
+    "transformers==5.20.2",
 ]
 
 [dependency-groups]
