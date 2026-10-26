@@ -107,3 +107,26 @@ def test_ticker_mapping() -> None:
     assert qqq3 is not None and qqq3.symbol == "NDX3L"
     assert match_instrument("AAPL_US_EQ") is None
     assert match_instrument("???") is None
+
+
+def test_only_universe_positions_count_in_limits() -> None:
+    from app.broker.service import real_state
+    from app.broker.trading212 import AccountSummary, BrokerPosition, BrokerSnapshot
+
+    others = [BrokerPosition(f"AZ{i}_US_EQ", 1, 5, 5, 5, 0) for i in range(17)]
+    snap = BrokerSnapshot(
+        0.0,
+        AccountSummary("EUR", 152.0, 12.0, 140.0, 0.0),
+        [*others, BrokerPosition("3USLl_EQ", 1, 10, 10, 10, 0)],
+    )
+
+    class Conn:
+        def execute(self, *_: object) -> "Conn":
+            return self
+
+        def scalar_one(self) -> float:
+            return 150.0
+
+    state = real_state(Conn(), snap, "live")  # type: ignore[arg-type]
+    assert [p.symbol for p in state.open_positions] == ["SPX3L"]
+    assert state.cash == 12.0 and state.equity == 152.0

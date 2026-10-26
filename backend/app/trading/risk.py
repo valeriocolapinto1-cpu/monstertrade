@@ -45,6 +45,8 @@ class PortfolioState:
     open_positions: list[OpenPosition] = field(default_factory=list)
     # "simulazione" (diario) oppure "conto" (Trading 212, sola lettura).
     source: str = "simulazione"
+    # Liquidità reale del conto; se assente si ricava da capitale meno investito.
+    cash: float | None = None
 
     @property
     def day_pnl(self) -> float:
@@ -128,7 +130,7 @@ def plan_trade(req: TradeRequest, state: PortfolioState, cfg: RiskConfig) -> Tra
 
     notes: list[str] = []
     size = position_size(state.equity, cfg.risk_per_trade, stop_pct, rt)
-    cash = max(state.equity - state.invested(), 0.0)
+    cash = state.cash if state.cash is not None else max(state.equity - state.invested(), 0.0)
     if size > cash:
         size = cash
         notes.append("Dimensione ridotta alla liquidità disponibile")

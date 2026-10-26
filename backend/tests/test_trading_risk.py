@@ -131,3 +131,14 @@ def test_small_capital_50_eur() -> None:
     assert isinstance(plan, TradePlan)
     assert plan.risk_eur <= 0.5 + 1e-6  # 1% di 50 euro, costi inclusi
     assert 1.0 <= plan.size_eur <= 50
+
+
+def test_real_cash_limits_size() -> None:
+    # Conto con altre azioni: la liquidità reale (5 €) limita la posizione.
+    state = PortfolioState(equity=150, day_start_equity=150, cash=5.0)
+    plan = plan_trade(
+        TradeRequest("NDX2L", "swing", 2, 100.0, 2.0, 0.004), state, RiskConfig(150, min_order=1)
+    )
+    assert isinstance(plan, TradePlan)
+    assert plan.size_eur <= 5.0
+    assert "liquidità" in " ".join(plan.notes)

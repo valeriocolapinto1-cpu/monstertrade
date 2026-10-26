@@ -90,8 +90,11 @@ def day_start_total(conn: Connection, snapshot: BrokerSnapshot, env: str = "live
 def real_state(
     conn: Connection, snapshot: BrokerSnapshot, env: str | None = None
 ) -> PortfolioState:
-    mapped = map_positions(snapshot)
+    # Nei limiti (3 posizioni, leva 3x, correlazione) contano solo gli strumenti dell'app;
+    # le altre posizioni del conto pesano su valore, perdita giornaliera e liquidità.
+    mapped = [m for m in map_positions(snapshot) if m.spec is not None]
     return PortfolioState(
+        cash=max(snapshot.summary.cash, 0.0),
         equity=snapshot.summary.total,
         day_start_equity=day_start_total(conn, snapshot, env or get_settings().t212_env),
         open_positions=[OpenPosition(m.key, m.leverage, m.position.value) for m in mapped],
