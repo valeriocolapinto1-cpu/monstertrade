@@ -20,3 +20,7 @@
 ## Capitale minimo 50 € (22 ottobre 2026)
 
 L'utente opera con un capitale reale di 50 €. Il minimo di `CAPITAL_EUR` passa da 500 a 50 € e il minimo per posizione (`MIN_ORDER_EUR`) da 10 a 1 €, sfruttando le frazioni di Trading 212. Tutte le altre regole restano invariate: rischio 1% per trade (0,50 € con 50 €), perdita giornaliera massima 3%, massimo 3 posizioni, massimo 30% in leva 3x (15 €). Con posizioni di pochi euro ogni proposta deve comunque risultare conveniente dopo spread e cambio.
+
+## Limiti calcolati solo sulle posizioni dell'app (26 ottobre 2026)
+
+Il conto Trading 212 dell'utente contiene anche azioni gestite a mano. Nei limiti del piano (3 posizioni, 30% in leva 3x, correlazione) contano solo le posizioni sugli strumenti dell'universo; le altre restano visibili in Portafoglio e pesano comunque sul valore del conto, sulla perdita giornaliera (3%) e sulla liquidità disponibile, che si legge direttamente dal conto.

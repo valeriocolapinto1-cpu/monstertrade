@@ -199,7 +199,10 @@ def test_real_account_drives_risk(
     from app.api import broker as broker_api
     from app.broker import service
 
-    fake = FakeBroker([("3USLl_EQ", 300.0), ("AAPL_US_EQ", 100.0), ("QQQSl_EQ", 50.0)])
+    # AAPL è fuori dall'universo: non conta nel limite di 3 posizioni.
+    fake = FakeBroker(
+        [("3USLl_EQ", 300.0), ("AAPL_US_EQ", 100.0), ("QQQSl_EQ", 50.0), ("LQQp_EQ", 40.0)]
+    )
     monkeypatch.setattr(service, "get_broker", lambda: fake)
     monkeypatch.setattr(broker_api, "get_broker", lambda: fake)
     run_update(engine, FakeRegistry(), now=NOW)
@@ -207,7 +210,7 @@ def test_real_account_drives_risk(
 
     data = client.get("/api/broker/portfolio").json()
     assert data["configured"] and data["read_only"]
-    assert [p["symbol"] for p in data["positions"]] == ["SPX3L", None, "NDX3S"]
+    assert [p["symbol"] for p in data["positions"]] == ["SPX3L", None, "NDX3S", "NDX2L"]
     assert data["risk"]["lev3_exposure"] == 350.0  # 3x long e short
     assert data["risk"]["lev3_limit"] == pytest.approx(360.0)
     assert data["risk"]["positions"] == 3
