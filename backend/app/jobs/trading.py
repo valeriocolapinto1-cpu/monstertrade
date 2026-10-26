@@ -24,8 +24,22 @@ def run(engine: Engine, now: datetime | None = None, send: bool = True) -> dict[
     with engine.begin() as conn:
         counts = simulate(conn, now)
     with engine.begin() as conn:
-        candidates, _ = evaluate(conn, cfg)
+        candidates, state = evaluate(conn, cfg)
         created = save_proposals(conn, candidates, now)
+    # Nei log del job: perché ogni candidato è stato proposto o scartato.
+    log.info(
+        "stato: capitale %.2f, posizioni e proposte %d, fonte %s",
+        state.equity,
+        len(state.open_positions),
+        state.source,
+    )
+    for c in candidates:
+        esito = (
+            f"proposta {c.outcome.size_eur:.2f} €"
+            if isinstance(c.outcome, TradePlan)
+            else f"scartato: {c.outcome.reason}"
+        )
+        log.info("%s %s score %.0f: %s", c.spec.symbol, c.horizon, c.score, esito)
     counts["proposte"] = len(created)
     if send and created:
         topic = settings.ntfy_topic.get_secret_value() if settings.ntfy_topic else None
