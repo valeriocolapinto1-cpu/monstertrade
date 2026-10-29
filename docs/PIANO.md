@@ -146,6 +146,6 @@ Cinque fasi, ciascuna con un criterio da soddisfare per passare alla successiva.
 2. **Indicatori e backtesting**: schede esplicative, strategie semplici di confronto. Criterio: risultato positivo dopo i costi sullo storico.
 3. **Sentiment e score**: news, social, FinBERT, score finale. Criterio: lo score migliora il backtest.
 4. **Simulazione**: diario dei consigli, trade simulati, rischio. Criterio: mesi di risultati positivi dopo i costi.
-5. **Trading 212**: lettura portafoglio, poi ordini con conferma.
+5. [x] **Trading 212**: lettura portafoglio, poi ordini con conferma.
 
 Si passa al broker solo dopo la simulazione.
