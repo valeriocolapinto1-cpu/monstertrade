@@ -142,7 +142,7 @@ Da verificare nella documentazione ufficiale di Trading 212 prima di costruire: 
 
 Cinque fasi, ciascuna con un criterio da soddisfare per passare alla successiva. Se non è soddisfatto, si resta nella fase e si corregge. Le fasi non hanno date fisse.
 
-1. **Dati e grafici**: prezzi, storico, grafici di base. Criterio: dati completi e senza buchi.
+1. [x] **Dati e grafici**: prezzi, storico, grafici di base. Criterio: dati completi e senza buchi.
 2. **Indicatori e backtesting**: schede esplicative, strategie semplici di confronto. Criterio: risultato positivo dopo i costi sullo storico.
 3. **Sentiment e score**: news, social, FinBERT, score finale. Criterio: lo score migliora il backtest.
 4. **Simulazione**: diario dei consigli, trade simulati, rischio. Criterio: mesi di risultati positivi dopo i costi.
